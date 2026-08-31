@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct UserListView<ViewModel: UserListViewModelProtocol>: View {
-    @ObservedObject var viewModel: ViewModel
+    @Bindable var viewModel: ViewModel
 
     var body: some View {
         NavigationStack {

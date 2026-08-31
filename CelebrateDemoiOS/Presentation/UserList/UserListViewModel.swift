@@ -1,8 +1,8 @@
-import Combine
 import Foundation
+import Observation
 
 @MainActor
-protocol UserListViewModelProtocol: ObservableObject {
+protocol UserListViewModelProtocol: AnyObject, Observable {
     var state: UserListViewState { get }
     var isLoadingMore: Bool { get }
     var canLoadMore: Bool { get }
@@ -15,10 +15,11 @@ protocol UserListViewModelProtocol: ObservableObject {
 }
 
 @MainActor
+@Observable
 final class UserListViewModel: UserListViewModelProtocol {
-    @Published private(set) var state: UserListViewState = .loading
-    @Published private(set) var isLoadingMore = false
-    @Published var query = ""
+    private(set) var state: UserListViewState = .loading
+    private(set) var isLoadingMore = false
+    var query = ""
 
     private let getUsers: any GetUsersInteractorProtocol
     private let searchUsers: any SearchUsersInteractorProtocol
