@@ -13,6 +13,11 @@ protocol SearchUsersInteractorProtocol: Sendable {
 }
 
 struct SearchUsersInteractor: SearchUsersInteractorProtocol {
+    /// Matches ``GetUsersInteractor/pageSize``. The two must agree: a search that
+    /// paginated differently would break `Page.nextSkip` arithmetic when the list
+    /// switches between filtered and unfiltered.
+    static let pageSize = 30
+
     private let repository: any UserRepositoryProtocol
 
     init(repository: any UserRepositoryProtocol) {
@@ -23,6 +28,6 @@ struct SearchUsersInteractor: SearchUsersInteractorProtocol {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return .empty }
 
-        return try await repository.searchUsers(query: trimmed, limit: UsersPage.size, skip: skip)
+        return try await repository.searchUsers(query: trimmed, limit: Self.pageSize, skip: skip)
     }
 }

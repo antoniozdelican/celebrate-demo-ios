@@ -11,20 +11,15 @@ struct SearchUsersInteractorTests {
 
         _ = try await sut.execute(query: "  Emily  ", skip: 0)
 
-        #expect(repository.calls == [.search(query: "Emily", limit: UsersPage.size, skip: 0)])
+        #expect(repository.calls == [.search(query: "Emily", limit: SearchUsersInteractor.pageSize, skip: 0)])
     }
 
-    @Test("Search paginates with the same page size as the list, so offsets stay comparable")
-    func sharesPageSizeWithList() async throws {
-        let repository = UserRepositoryStub()
-
-        _ = try await GetUsersInteractor(repository: repository).execute(skip: 0)
-        _ = try await SearchUsersInteractor(repository: repository).execute(query: "Emily", skip: 0)
-
-        #expect(repository.calls == [
-            .users(limit: UsersPage.size, skip: 0),
-            .search(query: "Emily", limit: UsersPage.size, skip: 0),
-        ])
+    /// The two page sizes are declared separately, so this guards the drift that
+    /// duplication invites: a search paginating differently from the list would break
+    /// `Page.nextSkip` arithmetic when switching between filtered and unfiltered.
+    @Test("Search and list request the same page size")
+    func sharesPageSizeWithList() {
+        #expect(SearchUsersInteractor.pageSize == GetUsersInteractor.pageSize)
     }
 
     @Test(
@@ -48,7 +43,7 @@ struct SearchUsersInteractorTests {
 
         _ = try await sut.execute(query: "Emily", skip: 30)
 
-        #expect(repository.calls == [.search(query: "Emily", limit: UsersPage.size, skip: 30)])
+        #expect(repository.calls == [.search(query: "Emily", limit: SearchUsersInteractor.pageSize, skip: 30)])
     }
 
     @Test("Repository failures propagate untouched")

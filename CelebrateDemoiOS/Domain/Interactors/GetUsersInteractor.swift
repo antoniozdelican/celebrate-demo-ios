@@ -7,6 +7,10 @@ protocol GetUsersInteractorProtocol: Sendable {
 }
 
 struct GetUsersInteractor: GetUsersInteractorProtocol {
+    /// A domain decision, not a presentation one: the UI should not be able to change
+    /// what a page costs. 30 sits mid-range of the 20–50 the API is comfortable serving.
+    static let pageSize = 30
+
     private let repository: any UserRepositoryProtocol
 
     init(repository: any UserRepositoryProtocol) {
@@ -14,6 +18,6 @@ struct GetUsersInteractor: GetUsersInteractorProtocol {
     }
 
     func execute(skip: Int) async throws(DomainError) -> Page<User> {
-        try await repository.users(limit: UsersPage.size, skip: skip)
+        try await repository.users(limit: Self.pageSize, skip: skip)
     }
 }
