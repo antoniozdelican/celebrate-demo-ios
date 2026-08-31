@@ -14,9 +14,9 @@ import Foundation
 /// owns a `Session`, which owns a `URLSession` and its connection pool. Rebuilding it per
 /// screen or per request would discard connection reuse and leak sessions.
 struct AppDependencies {
-    let getUsers: any GetUsersInteractorProtocol
-    let searchUsers: any SearchUsersInteractorProtocol
-    let getUserDetails: any GetUserDetailsInteractorProtocol
+    let getUsersInteractor: any GetUsersInteractorProtocol
+    let searchUsersInteractor: any SearchUsersInteractorProtocol
+    let getUserDetailsInteractor: any GetUserDetailsInteractorProtocol
 
     /// The production graph, wired against the live DummyJSON API.
     ///
@@ -29,9 +29,9 @@ struct AppDependencies {
         let repository = UserRepository(remoteDataSource: dataSource)
 
         return AppDependencies(
-            getUsers: GetUsersInteractor(repository: repository),
-            searchUsers: SearchUsersInteractor(repository: repository),
-            getUserDetails: GetUserDetailsInteractor(repository: repository)
+            getUsersInteractor: GetUsersInteractor(repository: repository),
+            searchUsersInteractor: SearchUsersInteractor(repository: repository),
+            getUserDetailsInteractor: GetUserDetailsInteractor(repository: repository)
         )
     }
 }

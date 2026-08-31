@@ -12,7 +12,11 @@ struct UserListViewModelTests {
         searchUsers: SearchUsersInteractorStub = .init(),
         debounce: Duration = .zero
     ) -> UserListViewModel {
-        UserListViewModel(getUsers: getUsers, searchUsers: searchUsers, searchDebounce: debounce)
+        UserListViewModel(
+            getUsersInteractor: getUsers,
+            searchUsersInteractor: searchUsers,
+            searchDebounce: debounce
+        )
     }
 
     // MARK: - Initial load

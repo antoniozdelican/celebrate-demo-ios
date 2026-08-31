@@ -21,20 +21,20 @@ final class UserListViewModel: UserListViewModelProtocol {
     private(set) var isLoadingMore = false
     var query = ""
 
-    private let getUsers: any GetUsersInteractorProtocol
-    private let searchUsers: any SearchUsersInteractorProtocol
+    private let getUsersInteractor: any GetUsersInteractorProtocol
+    private let searchUsersInteractor: any SearchUsersInteractorProtocol
     private let searchDebounce: Duration
 
     private var nextSkip: Int?
     private var hasLoadedOnce = false
 
     init(
-        getUsers: any GetUsersInteractorProtocol,
-        searchUsers: any SearchUsersInteractorProtocol,
+        getUsersInteractor: any GetUsersInteractorProtocol,
+        searchUsersInteractor: any SearchUsersInteractorProtocol,
         searchDebounce: Duration = .milliseconds(300)
     ) {
-        self.getUsers = getUsers
-        self.searchUsers = searchUsers
+        self.getUsersInteractor = getUsersInteractor
+        self.searchUsersInteractor = searchUsersInteractor
         self.searchDebounce = searchDebounce
     }
 
@@ -101,8 +101,8 @@ final class UserListViewModel: UserListViewModelProtocol {
 
     private func page(skip: Int) async throws(DomainError) -> Page<User> {
         isSearching
-            ? try await searchUsers.execute(query: query, skip: skip)
-            : try await getUsers.execute(skip: skip)
+            ? try await searchUsersInteractor.execute(query: query, skip: skip)
+            : try await getUsersInteractor.execute(skip: skip)
     }
 
     private var emptyReason: UserListViewState.Empty {

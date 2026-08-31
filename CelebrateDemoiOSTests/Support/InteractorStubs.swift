@@ -40,6 +40,24 @@ final class SearchUsersInteractorStub: SearchUsersInteractorProtocol, @unchecked
     }
 }
 
+final class GetUserDetailsInteractorStub: GetUserDetailsInteractorProtocol, @unchecked Sendable {
+    private let lock = NSLock()
+    private var _ids: [Int] = []
+
+    var result: Result<UserDetails, DomainError> = .success(.stub)
+
+    var ids: [Int] { lock.withLock { _ids } }
+    var callCount: Int { ids.count }
+
+    func execute(id: Int) async throws(DomainError) -> UserDetails {
+        lock.withLock { _ids.append(id) }
+        switch result {
+        case .success(let details): return details
+        case .failure(let error): throw error
+        }
+    }
+}
+
 extension Page where Item == User {
     /// A page of `count` users starting at `skip`, with `total` items available overall.
     static func stub(count: Int, skip: Int = 0, total: Int) -> Page<User> {

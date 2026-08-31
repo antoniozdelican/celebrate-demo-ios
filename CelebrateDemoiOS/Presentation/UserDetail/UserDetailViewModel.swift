@@ -15,18 +15,18 @@ final class UserDetailViewModel: UserDetailViewModelProtocol {
     private(set) var state: UserDetailViewState = .loading
 
     private let userID: Int
-    private let getUserDetails: any GetUserDetailsInteractorProtocol
+    private let getUserDetailsInteractor: any GetUserDetailsInteractorProtocol
 
-    init(userID: Int, getUserDetails: any GetUserDetailsInteractorProtocol) {
+    init(userID: Int, getUserDetailsInteractor: any GetUserDetailsInteractorProtocol) {
         self.userID = userID
-        self.getUserDetails = getUserDetails
+        self.getUserDetailsInteractor = getUserDetailsInteractor
     }
 
     func load() async {
         guard state == .loading else { return }
 
         do {
-            state = .loaded(try await getUserDetails.execute(id: userID))
+            state = .loaded(try await getUserDetailsInteractor.execute(id: userID))
         } catch {
             guard error != .cancelled else { return }
             state = .failed(error)
