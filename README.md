@@ -8,7 +8,7 @@ structured with Clean Architecture — presentation, domain and data layers with
 dependencies pointing inwards.
 
 > **Status: data layer complete.** The domain contract and the full data stack are
-> implemented and tested (48 test cases, no network access). The presentation layer,
+> implemented and tested — 50 test cases, no network access. The presentation layer,
 > design system and interactors are next.
 
 ## Requirements
@@ -56,23 +56,27 @@ the domain layer declares.
 ┌─────────────────────────┴──────────────────────────────┐
 │                        Data                            │
 │   UserRepository ─▶ UserRemoteDataSource ─▶ HTTPClient │
-│   maps DTO→entity     owns endpoints         Alamofire │
-│   maps HTTPError→DomainError                           │
+│   fetch, then map     owns paths + requests    Alamofire│
 └────────────────────────────────────────────────────────┘
 ```
 
 ### Layer responsibilities
 
 **Presentation** — SwiftUI views and their view models. A view model depends only on
-interactors, holds screen state, and never sees a DTO, an HTTP status code or a
-networking type.
+interactors, holds screen state, and never sees a response model, an HTTP status code or
+a networking type.
 
 **Domain** — plain Swift. Entities, interactors, and the repository protocol.
 Framework-free, so it is testable without a simulator and portable if the app ever grows
 a second target.
 
-**Data** — implements the domain's repository contract. Fetches DTOs, maps them to
-entities, and translates transport failures into domain failures.
+**Data** — implements the domain's repository contract. Fetches response models, maps
+them to entities, and translates transport failures into domain failures.
+
+Every conversion is an initialiser on the domain type — `User(response:)`,
+`Page(response:)`, `UserDetails(response:)`, `DomainError(httpError:)` — declared in Data
+files. Extending a Domain type from Data is fine; declaring these *in* Domain would
+invert the dependency rule, since the response models and `HTTPError` are Data types.
 
 ### Naming
 
@@ -93,14 +97,20 @@ manager. This project does both, split by what each type knows:
 
 | | `HTTPClient` | `UserRemoteDataSource` |
 |---|---|---|
-| Knows about | verbs, headers, status codes, decoding, retry | the users resource, its endpoints, its DTOs |
+| Knows about | verbs, headers, status codes, decoding | the users resource, its paths, its response models |
 | Knows nothing about | users, DummyJSON, pagination | HTTP, Alamofire, JSON |
 | Reused by | every future data source | nobody — it *is* the users resource |
 
-Consequences: Alamofire stays confined to the client, so replacing it is a change behind
-an unchanged protocol; cross-cutting policy (retry, pinning, logging) is written once;
-and there are two testing seams instead of one — fake the client for unit tests, stub the
-wire beneath the real client for integration tests.
+`HTTPClient`'s initialiser takes only Foundation types (`URL`, `URLSessionConfiguration`),
+so no caller imports Alamofire — including the composition root. The library is confined
+to two files, `HTTPClient.swift` and `HTTPError.swift`.
+
+There are two testing seams rather than one: fake `HTTPClientProtocol` for unit tests,
+stub the wire beneath the real client for integration tests.
+
+No automatic retry. Failures surface through `DomainError.isRetryable` and a user-facing
+retry affordance instead — silent retries double latency during a real outage and hide
+the failure from the person who could act on it.
 
 ### Errors are a closed set
 
@@ -118,7 +128,7 @@ to be loaded. Input is debounced, and in-flight requests are cancelled when supe
 
 | Tier | Tooling | Scope |
 |---|---|---|
-| Unit | Swift Testing | interactors, mapping, error translation, view model state |
+| Unit | Swift Testing | request construction, mapping, error translation, view model state |
 | Integration | Swift Testing + `URLProtocol` stub | the real stack with only the wire faked |
 | Snapshot | swift-snapshot-testing | design-system components, screen states, light/dark |
 | E2E | XCUITest | launch → list → search → detail → animated interaction |
@@ -133,10 +143,10 @@ xcodebuild test -scheme CelebrateDemoiOS -destination 'platform=iOS Simulator,na
 
 | Suite | Kind | Covers |
 |---|---|---|
-| `UserEndpointsTests` | unit | query encoding, percent-escaping, `select` |
-| `MappingTests` | unit | DTO→entity degradation, date parsing, pagination arithmetic |
+| `HTTPRequestTests` | unit | URL construction, percent-escaping, dropped nil query items |
+| `MappingTests` | unit | response→entity degradation, date parsing, pagination arithmetic |
 | `DomainErrorTranslationTests` | unit | every `HTTPError`→`DomainError` pair, retryability |
-| `UserRemoteDataSourceTests` | unit | decoding and endpoint choice against a faked transport |
+| `UserRemoteDataSourceTests` | unit | request shape and decoding against a faked transport |
 | `HTTPClientIntegrationTests` | integration | real Alamofire: validation, `AFError` classification, cancellation |
 | `UserRepositoryIntegrationTests` | integration | full stack: pagination across two requests, search, error translation |
 
@@ -161,9 +171,16 @@ generated one.
 CelebrateDemoiOS/
 ├── CelebrateDemoiOS.xcodeproj
 ├── CelebrateDemoiOS/
-│   ├── Domain/                entities + repository contract
-│   ├── Data/                  network, DTOs, mapping, repository
-│   └── …                      app entry point, presentation (pending)
+│   ├── App/                   composition root + app entry point
+│   ├── Domain/
+│   │   ├── Entities/          User, UserDetails, Page, Address, Company, Gender, DomainError
+│   │   └── Repositories/      UserRepositoryProtocol
+│   └── Data/
+│       ├── Network/           HTTPClient, HTTPError, HTTPMethod, HTTPRequest
+│       ├── Remote/            UserRemoteDataSource
+│       ├── Repositories/      UserRepository
+│       ├── Responses/         one response model per file, each with its mapping
+│       └── Support/           date parsing, string normalisation
 ├── CelebrateDemoiOSTests/
 │   ├── Support/               URLProtocol stub, fixtures, fakes
 │   └── Data/                  data layer unit + integration suites
@@ -174,8 +191,9 @@ CelebrateDemoiOS/
 ## Roadmap
 
 - [x] Xcode project, git, tooling
+- [x] Composition root wiring the data stack
 - [x] Domain: entities and the repository contract
-- [x] Data: endpoints, DTOs, mapping, `HTTPClient`, `UserRemoteDataSource`, `UserRepository`
+- [x] Data: requests, response models, mapping, `HTTPClient`, `UserRemoteDataSource`, `UserRepository`
 - [x] Unit and integration tests for the data layer
 - [ ] Domain: interactors
 - [ ] Design system: reusable components
