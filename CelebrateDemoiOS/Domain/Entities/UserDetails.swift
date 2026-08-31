@@ -1,10 +1,5 @@
 import Foundation
 
-/// The full profile shown on the detail screen.
-///
-/// A separate type from ``User`` rather than an extension of it: the two come from
-/// different endpoints with different guarantees, and modelling them separately keeps
-/// the list screen from accidentally depending on fields it never fetched.
 struct UserDetails: Identifiable, Equatable, Sendable {
     let id: Int
     let firstName: String
