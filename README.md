@@ -7,9 +7,9 @@ The app lists users with pagination and search, opens a detail screen for each, 
 structured with Clean Architecture — presentation, domain and data layers with
 dependencies pointing inwards.
 
-> **Status: data layer complete.** The domain contract and the full data stack are
-> implemented and tested — 50 test cases, no network access. The presentation layer,
-> design system and interactors are next.
+> **Status: feature-complete except the animation.** All four layers are implemented and
+> the app runs against the live API. 74 tests pass with no network access. Remaining: the
+> collapsible-header animation, snapshot tests and an XCUITest end-to-end flow.
 
 ## Requirements
 
@@ -42,8 +42,9 @@ the domain layer declares.
 
 ```
 ┌───────────────────── Presentation ─────────────────────┐
-│   View  ──observes──▶  ViewModel                       │
+│   View  ──observes──▶  ViewModel  ──▶ Interactors      │
 │   SwiftUI, @Observable, @MainActor                     │
+│   Navigation is a Route enum, resolved in RootView     │
 └─────────────────────────┬──────────────────────────────┘
                           │ depends on
 ┌─────────────────────────▼──────────────────────────────┐
@@ -64,7 +65,14 @@ the domain layer declares.
 
 **Presentation** — SwiftUI views and their view models. A view model depends only on
 interactors, holds screen state, and never sees a response model, an HTTP status code or
-a networking type.
+a networking type. Each screen exposes its state as an enum — `UserListViewState`,
+`UserDetailViewState` — so every case the UI must render is enumerated in one place.
+
+**DesignSystem** — a sibling of Presentation rather than a folder inside it, because the
+rule that matters is that it knows *nothing* about the domain. `DSAvatar` takes a `URL`
+and initials, not a `User`; `DSStateView` takes a title, message and retry closure, not a
+`DomainError`. Only SwiftUI and CoreGraphics are imported there. `UserRow`, which does
+know about `User`, lives in Presentation and composes design-system components.
 
 **Domain** — plain Swift. Entities, interactors, and the repository protocol.
 Framework-free, so it is testable without a simulator and portable if the app ever grows
@@ -118,11 +126,55 @@ the failure from the person who could act on it.
 describes what the UI has to render. The repository translates between them, so no view
 ever pattern-matches on a networking type.
 
+### Navigation is a route enum, not a router
+
+Rows push `NavigationLink(value: Route.userDetail(userID:))`, and `RootView` owns the one
+`navigationDestination(for: Route.self)` that maps routes to screens. `UserListView`
+therefore does not know `UserDetailView` exists.
+
+A `Router` owning a `NavigationPath` was built and removed: taps go through
+`NavigationLink`, so `push`/`pop` had no callers and the type only wrapped a path the
+stack already manages. That seam belongs with deep linking, programmatic navigation from
+a view model, or state restoration — none of which exist yet, and the `Route` enum is
+already in place to build on.
+
+### View models are protocol-backed and own their state
+
+Each screen depends on a protocol — `UserListViewModelProtocol`,
+`UserDetailViewModelProtocol` — so tests and previews can substitute one. Views are
+generic over that protocol rather than holding an existential, which is what allows
+`$viewModel.query` to form a binding.
+
+Screens own their view model through `@State` with an injected initial value: the caller
+supplies it, the screen keeps it for that view identity. That matters for the detail
+screen, whose view model is built inside `navigationDestination` — a plain `let` would
+hand it a new, empty view model each time SwiftUI re-evaluated the closure.
+
+### The search bar is the platform's, not the design system's
+
+`.searchable(text:prompt:)` replaced a custom `DSSearchField`. The custom field had to be
+pinned outside the scroll view, which fought the large navigation title: during
+rubber-band overscroll the title's frame extends over anything pinned beneath the bar.
+Working around it cost a `safeAreaInset`, an inline title, a `contentMargins` override and
+a pinned section header, each fixing one symptom and causing another.
+
+`.searchable` puts the field in the navigation bar's own chrome, so it sticks while
+scrolling, the large title collapses correctly, and the Cancel button, scroll-to-dismiss
+keyboard and VoiceOver search semantics come for free. The design system keeps five
+components, above the brief's minimum of three.
+
 ### Search runs server-side
 
 `GET /users/search?q=` rather than filtering a locally-held array, because the dataset is
 larger than any single page — client-side filtering would only ever search what happened
-to be loaded. Input is debounced, and in-flight requests are cancelled when superseded.
+to be loaded.
+
+Debounce comes from `.task(id: viewModel.query)`: changing the query cancels the previous
+task, so a keystroke that is overtaken never reaches the interactor. A cancelled load
+leaves the state untouched rather than showing an error, since a superseded search is not
+a failure the user should see. List and search are separate use cases —
+`GetUsersInteractor` and `SearchUsersInteractor` — rather than one interactor taking a
+possibly-blank query, which would make an empty string a sentinel meaning "no filter".
 
 ## Testing
 
@@ -133,13 +185,14 @@ to be loaded. Input is debounced, and in-flight requests are cancelled when supe
 | Snapshot | swift-snapshot-testing | design-system components, screen states, light/dark |
 | E2E | XCUITest | launch → list → search → detail → animated interaction |
 
-Unit, integration and snapshot tests run from the **CelebrateDemoiOS** scheme:
+74 tests, no network access. Unit, integration and snapshot tests run from the
+**CelebrateDemoiOS** scheme:
 
 ```bash
 xcodebuild test -scheme CelebrateDemoiOS -destination 'platform=iOS Simulator,name=iPhone 16'
 ```
 
-### Data layer suites (implemented)
+### Suites
 
 | Suite | Kind | Covers |
 |---|---|---|
@@ -149,6 +202,11 @@ xcodebuild test -scheme CelebrateDemoiOS -destination 'platform=iOS Simulator,na
 | `UserRemoteDataSourceTests` | unit | request shape and decoding against a faked transport |
 | `HTTPClientIntegrationTests` | integration | real Alamofire: validation, `AFError` classification, cancellation |
 | `UserRepositoryIntegrationTests` | integration | full stack: pagination across two requests, search, error translation |
+| `GetUsersInteractorTests` | unit | which repository call the use case makes, and at what page size |
+| `SearchUsersInteractorTests` | unit | trimming, blank terms making no request, page size agreeing with the list |
+| `GetUserDetailsInteractorTests` | unit | identifier passed through, failures propagated |
+| `UserListViewModelTests` | unit | state machine: search, debounce cancellation, pagination, refresh, retry |
+| `UserDetailViewModelTests` | unit | load-once guard, notFound versus recoverable failures, retry |
 
 **How the integration tests work.** They build the production stack — real
 `UserRepository`, real `UserRemoteDataSource`, real `HTTPClient`, real Alamofire
@@ -174,19 +232,30 @@ CelebrateDemoiOS/
 │   ├── App/                   composition root + app entry point
 │   ├── Domain/
 │   │   ├── Entities/          User, UserDetails, Page, Address, Company, Gender, DomainError
+│   │   ├── Interactors/       GetUsers, SearchUsers, GetUserDetails
 │   │   └── Repositories/      UserRepositoryProtocol
-│   └── Data/
-│       ├── Network/           HTTPClient, HTTPError, HTTPMethod, HTTPRequest
-│       ├── Remote/            UserRemoteDataSource
-│       ├── Repositories/      UserRepository
-│       ├── Responses/         one response model per file, each with its mapping
-│       └── Support/           date parsing, string normalisation
+│   ├── Data/
+│   │   ├── Network/           HTTPClient, HTTPError, HTTPMethod, HTTPRequest
+│   │   ├── Remote/            UserRemoteDataSource
+│   │   ├── Repositories/      UserRepository
+│   │   ├── Responses/         one response model per file, each with its mapping
+│   │   └── Support/           date parsing, string normalisation
+│   ├── DesignSystem/
+│   │   ├── Tokens/            spacing, radius, colour, typography
+│   │   └── Components/        DSText, DSButton, DSAvatar, DSCard, DSStateView
+│   └── Presentation/
+│       ├── Navigation/        Route
+│       ├── Root/              RootView
+│       ├── UserList/          view, view model, state, row
+│       └── UserDetail/        view, view model, state
 ├── CelebrateDemoiOSTests/
 │   ├── Support/               URLProtocol stub, fixtures, fakes
-│   └── Data/                  data layer unit + integration suites
-├── CelebrateDemoiOSUITests/   XCUITest end-to-end tests
-└── docs/adr/                  architecture decision records
+│   ├── Data/                  data layer unit + integration suites
+│   ├── Domain/                interactor suites
+│   └── Presentation/          view model suites
+└── CelebrateDemoiOSUITests/   XCUITest end-to-end tests
 ```
+
 
 ## Roadmap
 
@@ -195,9 +264,22 @@ CelebrateDemoiOS/
 - [x] Domain: entities and the repository contract
 - [x] Data: requests, response models, mapping, `HTTPClient`, `UserRemoteDataSource`, `UserRepository`
 - [x] Unit and integration tests for the data layer
-- [ ] Domain: interactors
-- [ ] Design system: reusable components
-- [ ] Presentation: list with pagination, pull-to-refresh and search
-- [ ] Presentation: detail screen with a Reanimated-equivalent collapsible header
+- [x] Domain: interactors
+- [x] Design system: tokens and reusable components
+- [x] Presentation: list with pagination, pull-to-refresh and search
+- [x] Presentation: detail screen and navigation
+- [ ] Presentation: collapsible header animation on the detail screen
 - [ ] Snapshot tests
 - [ ] XCUITest end-to-end flow
+
+## What I would do with more time
+
+- **Modularise into local Swift packages.** The layering is currently a convention held
+  by folder structure and discipline. Domain, Data, DesignSystem and Presentation as
+  separate targets would make the dependency rule a compile-time guarantee — an
+  accidental `import` would fail to build rather than pass review.
+- **Cache and downsample avatars.** `AsyncImage` refetches on every reappearance and
+  decodes at full size. That, not view invalidation, is the real cost in a long list.
+- **A Router**, once deep linking or programmatic navigation needs one.
+- **Contract tests against the live API**, in a scheme excluded from the default test
+  action, to catch upstream drift without making pull-request runs depend on the network.
