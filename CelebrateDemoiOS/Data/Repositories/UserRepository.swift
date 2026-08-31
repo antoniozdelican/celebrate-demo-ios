@@ -18,7 +18,8 @@ struct UserRepository: UserRepositoryProtocol {
 
     func users(limit: Int, skip: Int) async throws(DomainError) -> Page<User> {
         do {
-            return Page(response: try await remoteDataSource.users(limit: limit, skip: skip))
+            let response = try await remoteDataSource.users(limit: limit, skip: skip)
+            return Page(response: response)
         } catch {
             throw DomainError(httpError: error)
         }
@@ -31,9 +32,8 @@ struct UserRepository: UserRepositoryProtocol {
         guard !trimmed.isEmpty else { return .empty }
 
         do {
-            return Page(
-                response: try await remoteDataSource.searchUsers(query: trimmed, limit: limit, skip: skip)
-            )
+            let response = try await remoteDataSource.searchUsers(query: trimmed, limit: limit, skip: skip)
+            return Page(response: response)
         } catch {
             throw DomainError(httpError: error)
         }
@@ -41,7 +41,8 @@ struct UserRepository: UserRepositoryProtocol {
 
     func userDetails(id: Int) async throws(DomainError) -> UserDetails {
         do {
-            return UserDetails(response: try await remoteDataSource.userDetails(id: id))
+            let response = try await remoteDataSource.userDetails(id: id)
+            return UserDetails(response: response)
         } catch {
             throw DomainError(httpError: error)
         }
