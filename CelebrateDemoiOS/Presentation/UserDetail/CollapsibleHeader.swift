@@ -39,6 +39,7 @@ struct CollapsibleHeader: View {
         .padding(.vertical, DSSpacing.xl * (1 - progress * 0.75))
         .background(DSColor.background)
         .animation(.interactiveSpring(response: 0.3, dampingFraction: 0.85), value: progress)
+        .accessibilityIdentifier("collapsibleHeader")
         .accessibilityElement(children: .combine)
         .accessibilityLabel([name, subtitle].compactMap { $0 }.joined(separator: ", "))
     }

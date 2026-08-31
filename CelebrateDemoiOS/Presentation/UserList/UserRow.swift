@@ -18,6 +18,7 @@ struct UserRow: View {
         .padding(.vertical, DSSpacing.xs)
         .contentShape(.rect)
         .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("userRow_\(user.id)")
     }
 }
 

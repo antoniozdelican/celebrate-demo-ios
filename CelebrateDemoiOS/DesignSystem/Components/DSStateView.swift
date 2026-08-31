@@ -38,6 +38,16 @@ struct DSStateView: View {
         }
         .padding(DSSpacing.xxl)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier(identifier)
+    }
+
+    private var identifier: String {
+        switch style {
+        case .loading: "state_loading"
+        case .empty: "state_empty"
+        case .failure: "state_failure"
+        }
     }
 
     private func icon(_ systemImage: String, color: Color) -> some View {

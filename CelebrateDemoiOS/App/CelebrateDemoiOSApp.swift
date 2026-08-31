@@ -8,7 +8,7 @@ struct CelebrateDemoiOSApp: App {
     /// select a fixture-backed graph, which is the only way to make error and empty
     /// states reachable from XCUITest — the live API will not return a 500 on request,
     /// and `URLProtocol` stubbing cannot cross into the app's process.
-    private let dependencies = AppDependencies.live()
+    private let dependencies = AppDependencies.make()
 
     var body: some Scene {
         WindowGroup {

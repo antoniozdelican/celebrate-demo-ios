@@ -41,6 +41,21 @@ struct UserDetailView<ViewModel: UserDetailViewModelProtocol>: View {
     }
 
     private func profile(_ details: UserDetails) -> some View {
+        VStack(spacing: 0) {
+            CollapsibleHeader(
+                imageURL: details.imageURL,
+                initials: details.initials,
+                name: details.fullName,
+                subtitle: details.company?.title,
+                scrollOffset: scrollOffset
+            )
+
+            scrollingContent(details)
+        }
+        .navigationTitle(scrollOffset > CollapsibleHeader.collapseDistance * 0.9 ? details.fullName : "")
+    }
+
+    private func scrollingContent(_ details: UserDetails) -> some View {
         ScrollView {
             VStack(spacing: DSSpacing.xl) {
                 Color.clear
@@ -78,16 +93,6 @@ struct UserDetailView<ViewModel: UserDetailViewModelProtocol>: View {
             .padding(.bottom, DSSpacing.lg)
         }
         .coordinateSpace(name: scrollSpaceName)
-        .safeAreaInset(edge: .top, spacing: 0) {
-            CollapsibleHeader(
-                imageURL: details.imageURL,
-                initials: details.initials,
-                name: details.fullName,
-                subtitle: details.company?.title,
-                scrollOffset: scrollOffset
-            )
-        }
-        .navigationTitle(scrollOffset > CollapsibleHeader.collapseDistance * 0.9 ? details.fullName : "")
     }
 
 

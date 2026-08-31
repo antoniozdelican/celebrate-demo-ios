@@ -69,6 +69,7 @@ struct UserListView<ViewModel: UserListViewModelProtocol>: View {
             }
         }
         .listStyle(.plain)
+        .accessibilityIdentifier("userList")
         .refreshable { await viewModel.refresh() }
     }
 }

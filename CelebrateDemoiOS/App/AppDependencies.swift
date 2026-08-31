@@ -24,12 +24,33 @@ struct AppDependencies {
     /// - Parameter baseURL: defaulted, and a parameter rather than a constant so that a
     ///   future staging environment — or a test that wants a harmless host — can supply
     ///   its own without this type growing a build-configuration dependency.
+    /// The graph the app launches with.
+    ///
+    /// Under a `-uiTesting` launch argument the repository is swapped for fixtures, which
+    /// is the only way to reach error and empty states from XCUITest: the app runs in its
+    /// own process, so the integration tests' `URLProtocol` stub cannot reach it, and the
+    /// live API will not return a 500 on request.
+    static func make() -> AppDependencies {
+        #if DEBUG
+        let arguments = ProcessInfo.processInfo.arguments
+        if arguments.contains("-uiTesting") {
+            let name = ProcessInfo.processInfo.environment["STUB_SCENARIO"] ?? "success"
+            let scenario = MockUserRepository.Scenario(rawValue: name) ?? .success
+            return make(repository: MockUserRepository(scenario: scenario))
+        }
+        #endif
+        return live()
+    }
+
     static func live(baseURL: URL = .dummyJSON) -> AppDependencies {
         let client = HTTPClient(baseURL: baseURL)
         let dataSource = UserRemoteDataSource(client: client)
-        let repository = UserRepository(remoteDataSource: dataSource)
 
-        return AppDependencies(
+        return make(repository: UserRepository(remoteDataSource: dataSource))
+    }
+
+    private static func make(repository: any UserRepositoryProtocol) -> AppDependencies {
+        AppDependencies(
             getUsersInteractor: GetUsersInteractor(repository: repository),
             searchUsersInteractor: SearchUsersInteractor(repository: repository),
             getUserDetailsInteractor: GetUserDetailsInteractor(repository: repository),
