@@ -28,6 +28,11 @@ open CelebrateDemoiOS.xcodeproj
 
 Select the **CelebrateDemoiOS** scheme and an iOS 17.6+ simulator, then run (`⌘R`).
 
+There is no Android target: the brief allowed a native implementation, and this is one —
+SwiftUI, Alamofire, XCUITest. The React Native equivalents map as `FlatList` → `List`,
+Reanimated → SwiftUI animation, Jest + React Native Testing Library → Swift Testing, and
+Detox → XCUITest.
+
 From the command line:
 
 ```bash
@@ -120,11 +125,42 @@ No automatic retry. Failures surface through `DomainError.isRetryable` and a use
 retry affordance instead — silent retries double latency during a real outage and hide
 the failure from the person who could act on it.
 
-### Errors are a closed set
+### Error handling is a closed set with per-case behaviour
 
-`HTTPError` describes transport failures and stops at the repository. `DomainError`
-describes what the UI has to render. The repository translates between them, so no view
-ever pattern-matches on a networking type.
+Two enums and one translation point. `HTTPError` describes transport failures and stops
+at the repository; `DomainError` describes what the UI has to render. `DomainError(httpError:)`
+is exhaustive over `HTTPError`, so adding a transport case breaks the build until it is
+mapped, and no view ever pattern-matches on a networking type.
+
+`UserRepositoryProtocol` is declared `async throws(DomainError)`. Translation is therefore
+a compiler requirement rather than a review comment — a raw `URLError` cannot reach a view
+model by accident.
+
+What each failure does, and why:
+
+| Case | Behaviour |
+|---|---|
+| `.notConnected`, `.timedOut`, `.server`, `.unknown` | full-screen error with **Try again** |
+| `.notFound` | its own state — "User not found", **no retry**, because retrying a deleted user fails identically every time |
+| `.cancelled` | **state left untouched**. A superseded search keystroke is not a failure the user should see |
+| `.invalidResponse` | error state, no retry — a malformed payload will be malformed again |
+
+`DomainError` carries `isRetryable` and `errorDescription`, so the presentation layer
+decides *how* to render a failure without re-deriving *which* failures are recoverable.
+
+Two rules beyond the enum:
+
+**Mapping degrades, it never fails.** A row with missing or whitespace-only fields becomes
+empty strings and `nil`s rather than throwing, so one malformed record cannot blank the
+whole list. Anything genuinely unusable fails at decode instead.
+
+**A pagination failure keeps what is already on screen.** Failing to load page three sets
+no error state; it stops pagination and leaves the first two pages rendered, rather than
+replacing what the user is reading with a full-screen error.
+
+No automatic retry. `RetryPolicy` was removed: silent retries double latency during a real
+outage and hide the failure from the person who could act on it. Failures surface to the
+user with a retry affordance instead.
 
 ### Navigation is a route enum, not a router
 
