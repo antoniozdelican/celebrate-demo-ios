@@ -45,7 +45,7 @@ struct UserDetailView<ViewModel: UserDetailViewModelProtocol>: View {
             VStack(spacing: DSSpacing.xl) {
                 Color.clear
                     .frame(height: 0)
-                    .onScrollOffsetChange { scrollOffset = $0 }
+                    .onScrollOffsetChange(in: scrollSpaceName) { scrollOffset = $0 }
 
                 if let company = details.company {
                     section("Work") {
@@ -119,25 +119,3 @@ struct UserDetailView<ViewModel: UserDetailViewModelProtocol>: View {
         }
     }
 }
-
-private struct ScrollOffsetKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {}
-}
-
-private extension View {
-    func onScrollOffsetChange(_ action: @escaping (CGFloat) -> Void) -> some View {
-        background {
-            GeometryReader { proxy in
-                Color.clear.preference(
-                    key: ScrollOffsetKey.self,
-                    value: -proxy.frame(in: .named(scrollSpaceName)).minY
-                )
-            }
-        }
-        .onPreferenceChange(ScrollOffsetKey.self) { action($0) }
-    }
-}
-
-
-
