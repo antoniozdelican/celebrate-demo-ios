@@ -8,7 +8,7 @@ import SwiftUI
 /// code, and because every test so far stubs the wire — this is the first thing to
 /// exercise the stack against the live API.
 struct ContentView: View {
-    let userRepository: any UserRepositoryProtocol
+    let getUsers: any GetUsersInteractorProtocol
 
     @State private var loadState: LoadState = .loading
 
@@ -59,7 +59,7 @@ struct ContentView: View {
 
     private func load() async {
         do {
-            loadState = .loaded(try await userRepository.users(limit: 30, skip: 0))
+            loadState = .loaded(try await getUsers.execute(skip: 0))
         } catch {
             loadState = .failed(error)
         }

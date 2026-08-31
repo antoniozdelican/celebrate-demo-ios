@@ -3,9 +3,10 @@ import Foundation
 /// The composition root: the single place that knows which concrete implementations
 /// satisfy the domain's contracts.
 ///
-/// Everything below this line depends on protocols only — the presentation layer
-/// receives a `UserRepositoryProtocol` and cannot tell whether it is backed by
-/// DummyJSON, a cache, or fixtures. Assembling the graph here rather than inside the
+/// Everything below this line depends on protocols only. The presentation layer receives
+/// interactors — never the repository — so a view model cannot reach past its use cases
+/// into arbitrary data access, and cannot tell whether the data comes from DummyJSON, a
+/// cache, or fixtures. Assembling the graph here rather than inside the
 /// Data layer is what keeps Alamofire from leaking upwards: `HTTPClient`'s initialiser
 /// takes only Foundation types, so this file does not import Alamofire either.
 ///
@@ -13,7 +14,9 @@ import Foundation
 /// owns a `Session`, which owns a `URLSession` and its connection pool. Rebuilding it per
 /// screen or per request would discard connection reuse and leak sessions.
 struct AppDependencies {
-    let userRepository: any UserRepositoryProtocol
+    let getUsers: any GetUsersInteractorProtocol
+    let searchUsers: any SearchUsersInteractorProtocol
+    let getUserDetails: any GetUserDetailsInteractorProtocol
 
     /// The production graph, wired against the live DummyJSON API.
     ///
@@ -25,7 +28,11 @@ struct AppDependencies {
         let dataSource = UserRemoteDataSource(client: client)
         let repository = UserRepository(remoteDataSource: dataSource)
 
-        return AppDependencies(userRepository: repository)
+        return AppDependencies(
+            getUsers: GetUsersInteractor(repository: repository),
+            searchUsers: SearchUsersInteractor(repository: repository),
+            getUserDetails: GetUserDetailsInteractor(repository: repository)
+        )
     }
 }
 

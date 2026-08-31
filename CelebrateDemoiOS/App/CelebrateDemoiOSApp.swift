@@ -12,7 +12,7 @@ struct CelebrateDemoiOSApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView(userRepository: dependencies.userRepository)
+            ContentView(getUsers: dependencies.getUsers)
         }
     }
 }
