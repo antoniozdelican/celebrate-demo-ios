@@ -7,8 +7,9 @@ The app lists users with pagination and search, opens a detail screen for each, 
 structured with Clean Architecture — presentation, domain and data layers with
 dependencies pointing inwards.
 
-> **Status: scaffolding.** The Xcode project is set up; feature code is not written yet.
-> This README describes the target design, and is updated as each layer lands.
+> **Status: data layer complete.** The domain contract and the full data stack are
+> implemented and tested (48 test cases, no network access). The presentation layer,
+> design system and interactors are next.
 
 ## Requirements
 
@@ -128,6 +129,27 @@ Unit, integration and snapshot tests run from the **CelebrateDemoiOS** scheme:
 xcodebuild test -scheme CelebrateDemoiOS -destination 'platform=iOS Simulator,name=iPhone 16'
 ```
 
+### Data layer suites (implemented)
+
+| Suite | Kind | Covers |
+|---|---|---|
+| `UserEndpointsTests` | unit | query encoding, percent-escaping, `select` |
+| `MappingTests` | unit | DTO→entity degradation, date parsing, pagination arithmetic |
+| `DomainErrorTranslationTests` | unit | every `HTTPError`→`DomainError` pair, retryability |
+| `UserRemoteDataSourceTests` | unit | decoding and endpoint choice against a faked transport |
+| `HTTPClientIntegrationTests` | integration | real Alamofire: validation, `AFError` classification, cancellation |
+| `UserRepositoryIntegrationTests` | integration | full stack: pagination across two requests, search, error translation |
+
+**How the integration tests work.** They build the production stack — real
+`UserRepository`, real `UserRemoteDataSource`, real `HTTPClient`, real Alamofire
+`Session` — and replace only the wire, via a `URLProtocol` stub installed on the
+session's `URLSessionConfiguration`. Everything except the socket runs for real, which is
+what lets them catch a misconfigured decoder or an unmapped `AFError` branch that a faked
+transport never produces.
+
+Each test owns a private `NetworkStub`, routed by a header stamped on its session, so
+there is no shared mutable state and the suites run in parallel.
+
 Swift Testing is used rather than XCTest or a third-party matcher library; it is
 first-party from Xcode 16 and needs no dependency. Fakes are hand-written protocol
 implementations — Swift has no runtime mocking, and a small fake is clearer than a
@@ -138,8 +160,13 @@ generated one.
 ```
 CelebrateDemoiOS/
 ├── CelebrateDemoiOS.xcodeproj
-├── CelebrateDemoiOS/          app sources
-├── CelebrateDemoiOSTests/     unit, integration and snapshot tests
+├── CelebrateDemoiOS/
+│   ├── Domain/                entities + repository contract
+│   ├── Data/                  network, DTOs, mapping, repository
+│   └── …                      app entry point, presentation (pending)
+├── CelebrateDemoiOSTests/
+│   ├── Support/               URLProtocol stub, fixtures, fakes
+│   └── Data/                  data layer unit + integration suites
 ├── CelebrateDemoiOSUITests/   XCUITest end-to-end tests
 └── docs/adr/                  architecture decision records
 ```
@@ -147,8 +174,9 @@ CelebrateDemoiOS/
 ## Roadmap
 
 - [x] Xcode project, git, tooling
-- [ ] Domain: entities and the repository contract
-- [ ] Data: endpoints, DTOs, mapping, `HTTPClient`, `UserRemoteDataSource`, `UserRepository`
+- [x] Domain: entities and the repository contract
+- [x] Data: endpoints, DTOs, mapping, `HTTPClient`, `UserRemoteDataSource`, `UserRepository`
+- [x] Unit and integration tests for the data layer
 - [ ] Domain: interactors
 - [ ] Design system: reusable components
 - [ ] Presentation: list with pagination, pull-to-refresh and search
