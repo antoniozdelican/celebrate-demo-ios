@@ -185,6 +185,45 @@ into the navigation bar after scrolling. It asserts that rather than the header'
 `accessibilityElement(children: .combine)` makes the reported frame the union of the
 header's children, not its visual height, so measuring it is misleading.
 
+### Scalability and performance
+
+The decisions that matter as the dataset and the UI grow, and what would matter next.
+
+**Payload size.** List and search requests send
+`select=firstName,lastName,email,image,company`, trimming each user from ~30 fields to 5.
+Across 208 users that is most of the bytes and most of the decode time. The detail screen
+fetches the full record, once, for one user.
+
+**Pagination cannot run away.** `Page.nextSkip` is derived from `skip + items.count`, not
+`skip + limit`, so a short page does not open a gap, and an empty page terminates even if
+`total` disagrees. Without that last rule a stale `total` produces an infinite scroll loop
+that keeps requesting forever.
+
+**Superseded work is cancelled, not awaited.** Search debounce comes from
+`.task(id: viewModel.query)`: changing the query cancels the previous task, so typing
+"Emily" issues one request rather than five. Cancellation is a first-class `DomainError`
+case that leaves state untouched, so a superseded keystroke never flashes an error.
+
+**One client for the app's lifetime.** `HTTPClient` owns a `Session`, which owns a
+`URLSession` and its connection pool. It is built once in the composition root —
+rebuilding it per screen would discard connection reuse and leak sessions.
+
+**A pagination failure keeps the rows already on screen** rather than replacing the list
+with a full-screen error, so a failed page-three request does not discard what the user is
+reading.
+
+**What would actually bite first.** `AsyncImage` is the real cost in a long list: no
+cache, so it refetches on every reappearance, and no downsampling, so a 128px image is
+decoded at full size. That is the first thing to fix, ahead of anything about view
+invalidation. `@Observable` gives per-property invalidation, but this screen's body reads
+every property it publishes, so the benefit only appears once the row list is extracted
+into a child view that reads just `state` — the change that makes the granularity
+meaningful rather than theoretical.
+
+**Not measured.** None of the above is profiled. At 30 rows with a lazy `List` the
+expectation is that none of it is detectable; the claims are about mechanism, not
+measurements.
+
 ### Search runs server-side
 
 `GET /users/search?q=` rather than filtering a locally-held array, because the dataset is
@@ -207,16 +246,32 @@ possibly-blank query, which would make an empty string a sentinel meaning "no fi
 | Snapshot | swift-snapshot-testing | design-system components, variants, light and dark |
 | E2E | XCUITest | launch → list → search → detail → animated interaction |
 
-93 tests, none of which touch the network. Everything runs from the
-**CelebrateDemoiOS** scheme:
+93 tests, none of which touch the network. All of them run from the
+**CelebrateDemoiOS** scheme, in Xcode with `⌘U` or from the command line.
+
+**Everything:**
 
 ```bash
 xcodebuild test -scheme CelebrateDemoiOS -destination 'platform=iOS Simulator,name=iPhone 16'
 ```
 
-The UI tests are sensitive to simulator state: a stale device produces
-"Failed to install or launch the test runner" rather than a test failure. Erasing and
-fully booting first avoids it.
+**Unit, integration and snapshot only** (fast, no app launch):
+
+```bash
+xcodebuild test -scheme CelebrateDemoiOS -destination 'platform=iOS Simulator,name=iPhone 16' \
+  -only-testing:CelebrateDemoiOSTests
+```
+
+**End-to-end only:**
+
+```bash
+xcodebuild test -scheme CelebrateDemoiOS -destination 'platform=iOS Simulator,name=iPhone 16' \
+  -only-testing:CelebrateDemoiOSUITests
+```
+
+The UI tests are sensitive to simulator state: a stale device reports
+"Failed to install or launch the test runner", which reads like a broken suite but is not.
+Erasing and fully booting first avoids it.
 
 ```bash
 xcrun simctl erase "iPhone 16" && xcrun simctl bootstatus "iPhone 16" -b
@@ -357,5 +412,10 @@ CelebrateDemoiOS/
 - **Cache and downsample avatars.** `AsyncImage` refetches on every reappearance and
   decodes at full size. That, not view invalidation, is the real cost in a long list.
 - **A Router**, once deep linking or programmatic navigation needs one.
+- **Cover pull-to-refresh end to end.** It is implemented and unit-tested through
+  `refresh()`, but no UI test performs the gesture, so the wiring between the gesture and
+  the view model is verified only by compiling.
+- **Profile the animation.** "Smooth and performant" is currently asserted by eye. A
+  Core Animation trace during the header collapse would make it a measurement.
 - **Contract tests against the live API**, in a scheme excluded from the default test
   action, to catch upstream drift without making pull-request runs depend on the network.
