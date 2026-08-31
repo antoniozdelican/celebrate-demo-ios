@@ -40,7 +40,7 @@ final class HTTPClientSpy: HTTPClientProtocol, @unchecked Sendable {
             throw error
         case .success(let data):
             do {
-                return try JSONDecoder.dummyJSON.decode(Response.self, from: data)
+                return try JSONDecoder().decode(Response.self, from: data)
             } catch {
                 throw .decoding(description: String(describing: error))
             }

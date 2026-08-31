@@ -201,10 +201,10 @@
 			);
 			mainGroup = A9D9CBCF304585A000ECE08C;
 			minimizedProjectReferenceProxies = 1;
-			preferredProjectObjectVersion = 77;
 			packageReferences = (
 				AF0000000000000000000001 /* XCRemoteSwiftPackageReference "Alamofire" */,
 			);
+			preferredProjectObjectVersion = 77;
 			productRefGroup = A9D9CBD9304585A000ECE08C /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -621,7 +621,6 @@
 			productName = Alamofire;
 		};
 /* End XCSwiftPackageProductDependency section */
-
 	};
 	rootObject = A9D9CBD0304585A000ECE08C /* Project object */;
 }

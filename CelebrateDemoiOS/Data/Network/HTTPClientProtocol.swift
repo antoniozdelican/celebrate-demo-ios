@@ -14,10 +14,3 @@ protocol HTTPClientProtocol: Sendable {
         as type: Response.Type
     ) async throws(HTTPError) -> Response
 }
-
-extension HTTPClientProtocol {
-    /// Sugar for call sites where the return type is already inferable.
-    func send<Response: Decodable & Sendable>(_ endpoint: Endpoint) async throws(HTTPError) -> Response {
-        try await send(endpoint, as: Response.self)
-    }
-}
