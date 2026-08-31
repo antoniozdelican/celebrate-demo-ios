@@ -7,12 +7,7 @@ struct UserListView<ViewModel: UserListViewModelProtocol>: View {
         NavigationStack {
             content
                 .navigationTitle("Users")
-                .safeAreaInset(edge: .top) {
-                    DSSearchField(text: $viewModel.query, placeholder: "Search users")
-                        .padding(.horizontal, DSSpacing.lg)
-                        .padding(.bottom, DSSpacing.sm)
-                        .background(DSColor.background)
-                }
+                .searchable(text: $viewModel.query, prompt: "Search users")
         }
         .task(id: viewModel.query) {
             await viewModel.load()
@@ -28,8 +23,19 @@ struct UserListView<ViewModel: UserListViewModelProtocol>: View {
         case .loaded(let users):
             list(users)
 
-        case .empty(let reason):
-            DSStateView(emptyStyle(reason))
+        case .empty(.noMatches(let query)):
+            DSStateView(.empty(
+                systemImage: "magnifyingglass",
+                title: "No results",
+                message: "Nothing matched “\(query)”."
+            ))
+
+        case .empty(.noUsers):
+            DSStateView(.empty(
+                systemImage: "person.2.slash",
+                title: "No users yet",
+                message: "There is nothing to show right now."
+            ))
 
         case .failed(let error):
             DSStateView(
@@ -60,22 +66,5 @@ struct UserListView<ViewModel: UserListViewModelProtocol>: View {
         }
         .listStyle(.plain)
         .refreshable { await viewModel.refresh() }
-    }
-
-    private func emptyStyle(_ reason: UserListViewState.Empty) -> DSStateView.Style {
-        switch reason {
-        case .noUsers:
-            .empty(
-                systemImage: "person.2.slash",
-                title: "No users yet",
-                message: "There is nothing to show right now."
-            )
-        case .noMatches(let query):
-            .empty(
-                systemImage: "magnifyingglass",
-                title: "No results",
-                message: "Nothing matched “\(query)”."
-            )
-        }
     }
 }
