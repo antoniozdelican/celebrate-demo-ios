@@ -12,12 +12,12 @@ struct CompanyResponse: Decodable, Equatable, Sendable {
 
 // MARK: - Mapping
 
-extension CompanyResponse {
-    func toDomain() -> UserDetails.Company {
-        UserDetails.Company(
-            name: name?.nilIfBlank,
-            title: title?.nilIfBlank,
-            department: department?.nilIfBlank
+extension Company {
+    init(response: CompanyResponse) {
+        self.init(
+            name: response.name?.nilIfBlank,
+            title: response.title?.nilIfBlank,
+            department: response.department?.nilIfBlank
         )
     }
 }

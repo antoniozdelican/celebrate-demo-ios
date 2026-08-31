@@ -14,14 +14,14 @@ struct AddressResponse: Decodable, Equatable, Sendable {
 
 // MARK: - Mapping
 
-extension AddressResponse {
-    func toDomain() -> UserDetails.Address {
-        UserDetails.Address(
-            street: address?.nilIfBlank,
-            city: city?.nilIfBlank,
-            state: state?.nilIfBlank,
-            postalCode: postalCode?.nilIfBlank,
-            country: country?.nilIfBlank
+extension Address {
+    init(response: AddressResponse) {
+        self.init(
+            street: response.address?.nilIfBlank,
+            city: response.city?.nilIfBlank,
+            state: response.state?.nilIfBlank,
+            postalCode: response.postalCode?.nilIfBlank,
+            country: response.country?.nilIfBlank
         )
     }
 }

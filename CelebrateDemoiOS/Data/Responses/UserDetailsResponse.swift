@@ -31,29 +31,29 @@ struct UserDetailsResponse: Decodable, Equatable, Sendable {
 
 // MARK: - Mapping
 
-extension UserDetailsResponse {
-    func toDomain() -> UserDetails {
-        UserDetails(
-            id: id,
-            firstName: firstName?.trimmed ?? "",
-            lastName: lastName?.trimmed ?? "",
-            maidenName: maidenName?.nilIfBlank,
-            email: email?.trimmed ?? "",
-            phone: phone?.nilIfBlank,
-            username: username?.nilIfBlank,
-            age: age,
-            gender: UserDetails.Gender(apiValue: gender),
-            birthDate: birthDate.flatMap(DummyJSONDate.parse),
-            imageURL: image?.nilIfBlank.flatMap(URL.init(string:)),
-            company: company?.toDomain(),
-            address: address?.toDomain(),
-            university: university?.nilIfBlank,
-            role: role?.nilIfBlank
+extension UserDetails {
+    init(response: UserDetailsResponse) {
+        self.init(
+            id: response.id,
+            firstName: response.firstName?.trimmed ?? "",
+            lastName: response.lastName?.trimmed ?? "",
+            maidenName: response.maidenName?.nilIfBlank,
+            email: response.email?.trimmed ?? "",
+            phone: response.phone?.nilIfBlank,
+            username: response.username?.nilIfBlank,
+            age: response.age,
+            gender: Gender(apiValue: response.gender),
+            birthDate: response.birthDate.flatMap(DummyJSONDate.parse),
+            imageURL: response.image?.nilIfBlank.flatMap(URL.init(string:)),
+            company: response.company.map(Company.init(response:)),
+            address: response.address.map(Address.init(response:)),
+            university: response.university?.nilIfBlank,
+            role: response.role?.nilIfBlank
         )
     }
 }
 
-private extension UserDetails.Gender {
+private extension Gender {
     /// Unknown values are preserved rather than discarded, so the UI can display
     /// whatever the API sends without this enum knowing it in advance.
     init(apiValue: String?) {

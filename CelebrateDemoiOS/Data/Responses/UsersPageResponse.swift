@@ -13,8 +13,15 @@ struct UsersPageResponse: Decodable, Equatable, Sendable {
 
 // MARK: - Mapping
 
-extension UsersPageResponse {
-    func toDomain() -> Page<User> {
-        Page(items: users.map { $0.toDomain() }, total: total, skip: skip, limit: limit)
+extension Page where Item == User {
+    /// Constrained to `Page<User>`: `Page` is generic, but this envelope only ever
+    /// carries users.
+    init(response: UsersPageResponse) {
+        self.init(
+            items: response.users.map(User.init(response:)),
+            total: response.total,
+            skip: response.skip,
+            limit: response.limit
+        )
     }
 }
