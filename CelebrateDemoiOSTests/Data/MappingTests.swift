@@ -9,7 +9,7 @@ struct MappingTests {
     func mapsCompleteSummary() throws {
         let page = try JSONDecoder().decode(UsersPageResponse.self, from: Fixtures.usersPage)
 
-        let user = try #require(page.toDomain().items.first)
+        let user = try #require(Page(response: page).items.first)
 
         #expect(user.id == 1)
         #expect(user.fullName == "Emily Johnson")
@@ -23,7 +23,7 @@ struct MappingTests {
     func mapsSparseSummary() throws {
         let page = try JSONDecoder().decode(UsersPageResponse.self, from: Fixtures.sparsePage)
 
-        let user = try #require(page.toDomain().items.first)
+        let user = try #require(Page(response: page).items.first)
 
         #expect(user.id == 42)
         #expect(user.fullName.isEmpty)
@@ -38,7 +38,7 @@ struct MappingTests {
     func mapsDetails() throws {
         let response = try JSONDecoder().decode(UserDetailsResponse.self, from: Fixtures.userDetails)
 
-        let details = response.toDomain()
+        let details = UserDetails(response: response)
 
         #expect(details.fullName == "Emily Johnson")
         #expect(details.maidenName == "Smith")
@@ -64,7 +64,7 @@ struct MappingTests {
         let data = Data(#"{ "id": 1, "gender": "non-binary" }"#.utf8)
         let response = try JSONDecoder().decode(UserDetailsResponse.self, from: data)
 
-        #expect(response.toDomain().gender == .other("non-binary"))
+        #expect(UserDetails(response: response).gender == .other("non-binary"))
     }
 
     @Test("Page arithmetic: a full page in a larger collection has a next offset")

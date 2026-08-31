@@ -15,7 +15,13 @@ struct HTTPClientIntegrationTests {
         let stack = TestStack()
         stack.stub.setStub(.ok(Fixtures.usersPage))
 
-        let page = try await stack.client.send(UserEndpoints.list(limit: 2, skip: 0), as: UsersPageResponse.self)
+        let page = try await stack.client.send(HTTPRequest(
+                path: "users",
+                queryItems: [
+                    URLQueryItem(name: "limit", value: "2"),
+                    URLQueryItem(name: "skip", value: "0"),
+                ]
+            ), as: UsersPageResponse.self)
 
         #expect(page.users.count == 2)
         let sent = try #require(stack.stub.recordedURLs.first)
@@ -30,7 +36,7 @@ struct HTTPClientIntegrationTests {
         stack.stub.setStub(.status(404, body: Fixtures.notFound))
 
         let error = await #expect(throws: HTTPError.self) {
-            _ = try await stack.client.send(UserEndpoints.details(id: 9999), as: UserDetailsResponse.self)
+            _ = try await stack.client.send(HTTPRequest(path: "users/9999"), as: UserDetailsResponse.self)
         }
 
         #expect(error?.statusCode == 404)
@@ -42,7 +48,7 @@ struct HTTPClientIntegrationTests {
         stack.stub.setStub(.ok(Fixtures.malformedPage))
 
         let error = await #expect(throws: HTTPError.self) {
-            _ = try await stack.client.send(UserEndpoints.list(limit: 30, skip: 0), as: UsersPageResponse.self)
+            _ = try await stack.client.send(HTTPRequest(path: "users"), as: UsersPageResponse.self)
         }
 
         guard case .decoding = try #require(error) else {
@@ -64,7 +70,7 @@ struct HTTPClientIntegrationTests {
         stack.stub.setStub(.failure(code))
 
         let error = await #expect(throws: HTTPError.self) {
-            _ = try await stack.client.send(UserEndpoints.list(limit: 30, skip: 0), as: UsersPageResponse.self)
+            _ = try await stack.client.send(HTTPRequest(path: "users"), as: UsersPageResponse.self)
         }
 
         #expect(error == expected)
@@ -76,7 +82,7 @@ struct HTTPClientIntegrationTests {
         stack.stub.setStub(.ok(Fixtures.usersPage))
 
         let task = Task {
-            try await stack.client.send(UserEndpoints.list(limit: 30, skip: 0), as: UsersPageResponse.self)
+            try await stack.client.send(HTTPRequest(path: "users"), as: UsersPageResponse.self)
         }
         task.cancel()
 

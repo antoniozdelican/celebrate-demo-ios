@@ -21,7 +21,7 @@ final class HTTPClientSpy: HTTPClientProtocol, @unchecked Sendable {
         self.outcome = outcome
     }
 
-    /// Endpoints the subject under test asked for, in order.
+    /// Requests the subject under test sent, in order.
     var requests: [HTTPRequest] { lock.withLock { _requests } }
 
     func set(_ outcome: Outcome) { lock.withLock { self.outcome = outcome } }

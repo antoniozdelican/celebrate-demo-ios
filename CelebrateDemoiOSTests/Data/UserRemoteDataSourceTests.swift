@@ -19,17 +19,47 @@ struct UserRemoteDataSourceTests {
         #expect(page.users.first?.company?.title == "Sales Manager")
     }
 
-    @Test("Asks for the endpoint the caller's parameters describe")
-    func requestsCorrectEndpoint() async throws {
+    @Test("The list request carries limit, skip and the trimmed field selection")
+    func buildsListRequest() async throws {
         let client = HTTPClientSpy(outcome: .success(Fixtures.usersPage))
         let sut = UserRemoteDataSource(client: client)
 
         _ = try await sut.users(limit: 50, skip: 100)
 
-        let endpoint = try #require(client.requests.first)
-        #expect(endpoint.path == "users")
-        #expect(endpoint.queryValue("limit") == "50")
-        #expect(endpoint.queryValue("skip") == "100")
+        let request = try #require(client.requests.first)
+        #expect(request.path == "users")
+        #expect(request.method == .get)
+        #expect(request.queryValue("limit") == "50")
+        #expect(request.queryValue("skip") == "100")
+        // `select` is what keeps the list payload to 5 fields per user instead of ~30.
+        #expect(request.queryValue("select") == "firstName,lastName,email,image,company")
+    }
+
+    @Test("The search request hits /users/search and sends the term verbatim under `q`")
+    func buildsSearchRequest() async throws {
+        let client = HTTPClientSpy(outcome: .success(Fixtures.searchResults))
+        let sut = UserRemoteDataSource(client: client)
+
+        _ = try await sut.searchUsers(query: "John Doe", limit: 20, skip: 0)
+
+        let request = try #require(client.requests.first)
+        #expect(request.path == "users/search")
+        #expect(request.queryValue("q") == "John Doe")
+        #expect(request.queryValue("limit") == "20")
+        #expect(request.queryValue("skip") == "0")
+    }
+
+    @Test("The detail request interpolates the identifier and asks for the full record")
+    func buildsDetailRequest() async throws {
+        let client = HTTPClientSpy(outcome: .success(Fixtures.userDetails))
+        let sut = UserRemoteDataSource(client: client)
+
+        _ = try await sut.userDetails(id: 7)
+
+        let request = try #require(client.requests.first)
+        #expect(request.path == "users/7")
+        // No `select`: the detail screen needs every field.
+        #expect(request.queryItems.isEmpty)
     }
 
     @Test("Ignores the fields we deliberately do not model")

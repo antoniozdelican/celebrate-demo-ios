@@ -1,4 +1,3 @@
-import Alamofire
 import Foundation
 @testable import CelebrateDemoiOS
 
@@ -7,9 +6,9 @@ import Foundation
 /// One instance per test: the stub is reachable as `stack.stub`, so no suite needs
 /// `.serialized` and the tests stay parallel-safe.
 ///
-/// Note the absence of an interceptor: the production client retries, which would make
-/// a 500-status test wait through two backoffs. Retry behaviour deserves its own test,
-/// not a tax on every other one.
+/// The configuration carries the stub `URLProtocol` and the header that routes replies
+/// back to this stack's own `NetworkStub`. `HTTPClient` builds the `Session` itself, so
+/// the wire is the only thing these tests replace.
 struct TestStack {
     static let baseURL = URL(string: "https://dummyjson.com")!
 
@@ -26,7 +25,7 @@ struct TestStack {
         configuration.httpAdditionalHeaders = [NetworkStub.headerField: stub.id]
         configuration.timeoutIntervalForRequest = 5
 
-        let client = HTTPClient(baseURL: baseURL, session: Session(configuration: configuration))
+        let client = HTTPClient(baseURL: baseURL, configuration: configuration)
         let dataSource = UserRemoteDataSource(client: client)
 
         self.stub = stub

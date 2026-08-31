@@ -20,7 +20,7 @@ struct DomainErrorTranslationTests {
         ]
     )
     func translates(httpError: HTTPError, expected: DomainError) {
-        #expect(DomainError(httpError) == expected)
+        #expect(DomainError(httpError: httpError) == expected)
     }
 
     @Test("Only failures a retry could plausibly fix are retryable")
