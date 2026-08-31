@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		AF0000000000000000000003 /* Alamofire in Frameworks */ = {isa = PBXBuildFile; productRef = AF0000000000000000000002 /* Alamofire */; };
+		AF0000000000000000000013 /* SnapshotTesting in Frameworks */ = {isa = PBXBuildFile; productRef = AF0000000000000000000012 /* SnapshotTesting */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -64,6 +65,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AF0000000000000000000013 /* SnapshotTesting in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -141,6 +143,7 @@
 			);
 			name = CelebrateDemoiOSTests;
 			packageProductDependencies = (
+				AF0000000000000000000012 /* SnapshotTesting */,
 			);
 			productName = CelebrateDemoiOSTests;
 			productReference = A9D9CBE6304585A300ECE08C /* CelebrateDemoiOSTests.xctest */;
@@ -203,6 +206,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				AF0000000000000000000001 /* XCRemoteSwiftPackageReference "Alamofire" */,
+				AF0000000000000000000011 /* XCRemoteSwiftPackageReference "swift-snapshot-testing" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = A9D9CBD9304585A000ECE08C /* Products */;
@@ -612,6 +616,14 @@
 				minimumVersion = 5.10.2;
 			};
 		};
+		AF0000000000000000000011 /* XCRemoteSwiftPackageReference "swift-snapshot-testing" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/pointfreeco/swift-snapshot-testing.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.17.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -619,6 +631,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = AF0000000000000000000001 /* XCRemoteSwiftPackageReference "Alamofire" */;
 			productName = Alamofire;
+		};
+		AF0000000000000000000012 /* SnapshotTesting */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AF0000000000000000000011 /* XCRemoteSwiftPackageReference "swift-snapshot-testing" */;
+			productName = SnapshotTesting;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

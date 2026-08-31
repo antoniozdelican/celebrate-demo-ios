@@ -7,9 +7,9 @@ The app lists users with pagination and search, opens a detail screen for each, 
 structured with Clean Architecture — presentation, domain and data layers with
 dependencies pointing inwards.
 
-> **Status: feature-complete.** All four layers are implemented, the app runs against the
-> live API, and 84 tests pass with no network access — 76 unit and integration, 8
-> end-to-end. Snapshot tests are the one item outstanding.
+> **Status: complete.** All four layers are implemented, the app runs against the live
+> API, and 93 tests pass with no network access — 76 unit and integration, 9 snapshot,
+> 8 end-to-end.
 
 ## Requirements
 
@@ -18,7 +18,7 @@ dependencies pointing inwards.
 | Xcode | 16.4+ |
 | Swift | 6.1 |
 | Minimum iOS | 17.6 |
-| Dependencies | Alamofire (SPM) — no CocoaPods |
+| Dependencies | Alamofire, swift-snapshot-testing (SPM) — no CocoaPods |
 
 ## Running
 
@@ -204,10 +204,10 @@ possibly-blank query, which would make an empty string a sentinel meaning "no fi
 |---|---|---|
 | Unit | Swift Testing | request construction, mapping, error translation, view model state |
 | Integration | Swift Testing + `URLProtocol` mock | the real stack with only the wire faked |
+| Snapshot | swift-snapshot-testing | design-system components, variants, light and dark |
 | E2E | XCUITest | launch → list → search → detail → animated interaction |
-| Snapshot | *not yet written* | design-system components, screen states, light/dark |
 
-84 tests, none of which touch the network. Everything runs from the
+93 tests, none of which touch the network. Everything runs from the
 **CelebrateDemoiOS** scheme:
 
 ```bash
@@ -237,6 +237,9 @@ xcrun simctl erase "iPhone 16" && xcrun simctl bootstatus "iPhone 16" -b
 | `GetUserDetailsInteractorTests` | unit | identifier passed through, failures propagated |
 | `UserListViewModelTests` | unit | state machine: search, debounce cancellation, pagination, refresh, retry |
 | `UserDetailViewModelTests` | unit | load-once guard, notFound versus recoverable failures, retry |
+| `DSButtonSnapshotTests` | snapshot | variants, sizes, loading versus disabled, dark mode |
+| `DSStateViewSnapshotTests` | snapshot | empty and failure states |
+| `DSComponentSnapshotTests` | snapshot | typography scale, avatar sizes, card |
 | `UserFlowUITests` | e2e | list, search and clear, no-match, tap into detail, header collapse, failure and empty scenarios |
 
 **How the integration tests work.** They build the production stack — real
@@ -264,6 +267,28 @@ not return a failure on request.
 **Naming.** Anything that stands in for a collaborator is a `*Mock` and lives in
 `Tests/Mocks`. Test *data* is a `*.fixture` in `Tests/Support`. `TestStack` is neither —
 it assembles the real production stack with only the wire replaced.
+
+**How the snapshot tests work.** They cover the design system, which is what satisfies the
+brief's "test at least one reusable UI component". The `DSButton` loading case pins a real
+bug: `.disabled(isLoading)` applied SwiftUI's disabled styling and desaturated the accent
+fill, so a loading button looked dead rather than busy.
+
+Tolerances are deliberately below 1 — `precision: 0.99`, `perceptualPrecision: 0.98`.
+Exact pixel equality fails on antialiasing differences nobody would call a regression, and
+that is the usual reason snapshot suites get deleted rather than maintained.
+
+These are the only XCTest suites in the project; everything else uses Swift Testing. Under
+Swift Testing each `assertSnapshot` ran twice in this bundle, recording two references per
+component. XCTest runs each once, and is the library's primary integration.
+
+> **References were recorded on an Intel Mac, iPhone 16, iOS 18.6.** Text renders
+> differently on Apple Silicon, so they will need re-recording on a different machine or
+> in CI. Record with:
+>
+> ```bash
+> SNAPSHOT_TESTING_RECORD=all xcodebuild test -scheme CelebrateDemoiOS \
+>   -destination 'platform=iOS Simulator,name=iPhone 16'
+> ```
 
 Swift Testing is used rather than XCTest or a third-party matcher library; it is
 first-party from Xcode 16 and needs no dependency. Fakes are hand-written protocol
@@ -298,6 +323,7 @@ CelebrateDemoiOS/
 │       ├── UserList/          view, view model, state, row
 │       └── UserDetail/        view, view model, state, collapsible header
 ├── CelebrateDemoiOSTests/
+│   ├── DesignSystem/          snapshot suites + recorded references
 │   ├── Mocks/                 one test double per file, all *Mock
 │   ├── Support/               TestStack, JSON fixtures, entity fixtures
 │   ├── Data/                  data layer unit + integration suites
@@ -320,7 +346,7 @@ CelebrateDemoiOS/
 - [x] Presentation: detail screen and navigation
 - [x] Presentation: collapsible header animation on the detail screen
 - [x] XCUITest end-to-end flow
-- [ ] Snapshot tests
+- [x] Snapshot tests for the design system
 
 ## What I would do with more time
 
