@@ -1,0 +1,76 @@
+# ---------------------------------------------------------------------------
+# macOS
+# ---------------------------------------------------------------------------
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+
+# ---------------------------------------------------------------------------
+# Xcode — user-specific state
+#
+# xcuserdata holds per-developer breakpoints, window layout and the scheme
+# "autocreation" list. It is noise in review and a reliable merge conflict.
+# Shared schemes (xcshareddata) ARE committed, so `xcodebuild -scheme` works on
+# a fresh clone and in CI.
+# ---------------------------------------------------------------------------
+xcuserdata/
+*.xcuserstate
+*.xcuserdatad/
+*.xcscmblueprint
+*.xccheckout
+*.moved-aside
+
+# ---------------------------------------------------------------------------
+# Xcode — build products and derived data
+# ---------------------------------------------------------------------------
+build/
+DerivedData/
+*.o
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+timeline.xctimeline
+playground.xcworkspace
+
+# ---------------------------------------------------------------------------
+# Swift Package Manager
+#
+# Package.resolved IS committed: it pins exact dependency versions so a clone
+# builds against the same Alamofire the tests were written for.
+# ---------------------------------------------------------------------------
+.build/
+.swiftpm/xcode/package.xcworkspace/xcuserdata/
+.swiftpm/configuration/registries.json
+.swiftpm/xcode/xcshareddata/xcschemes/
+Packages/
+*.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/configuration/
+
+# ---------------------------------------------------------------------------
+# Test output
+# ---------------------------------------------------------------------------
+*.xcresult/
+TestResults/
+
+# Snapshot tests write failure diffs next to the reference images; the
+# references themselves are committed, the failures are not.
+**/__Snapshots__/**/*.failure.png
+FailureDiffs/
+
+# ---------------------------------------------------------------------------
+# Secrets / local config
+# ---------------------------------------------------------------------------
+*.xcconfig.local
+.env
+.env.local
+
+# ---------------------------------------------------------------------------
+# Tooling
+# ---------------------------------------------------------------------------
+fastlane/report.xml
+fastlane/screenshots/**/*.png
+fastlane/test_output
+.idea/
+*.swp
