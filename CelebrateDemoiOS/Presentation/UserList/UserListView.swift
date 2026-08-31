@@ -1,13 +1,20 @@
 import SwiftUI
 
-struct UserListView<ViewModel: UserListViewModelProtocol>: View {
-    @Bindable var viewModel: ViewModel
+struct UserListView<ViewModel: UserListViewModelProtocol, Detail: View>: View {
+    @State private var viewModel: ViewModel
+    private let detail: (User) -> Detail
+
+    init(viewModel: ViewModel, @ViewBuilder detail: @escaping (User) -> Detail) {
+        _viewModel = State(wrappedValue: viewModel)
+        self.detail = detail
+    }
 
     var body: some View {
         NavigationStack {
             content
                 .navigationTitle("Users")
                 .searchable(text: $viewModel.query, prompt: "Search users")
+                .navigationDestination(for: User.self, destination: detail)
         }
         .task(id: viewModel.query) {
             await viewModel.load()
@@ -48,11 +55,13 @@ struct UserListView<ViewModel: UserListViewModelProtocol>: View {
     private func list(_ users: [User]) -> some View {
         List {
             ForEach(users) { user in
-                UserRow(user: user)
-                    .onAppear {
-                        guard user.id == users.last?.id else { return }
-                        Task { await viewModel.loadMore() }
-                    }
+                NavigationLink(value: user) {
+                    UserRow(user: user)
+                }
+                .onAppear {
+                    guard user.id == users.last?.id else { return }
+                    Task { await viewModel.loadMore() }
+                }
             }
 
             if viewModel.isLoadingMore {

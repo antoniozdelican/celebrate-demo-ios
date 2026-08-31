@@ -12,21 +12,28 @@ struct CelebrateDemoiOSApp: App {
     /// argument will select a fixture-backed graph, which is the only way to make error
     /// and empty states reachable from XCUITest — the live API will not return a 500 on
     /// request, and `URLProtocol` stubbing cannot cross into the app's process.
-    @State private var viewModel: UserListViewModel
+    private let dependencies: AppDependencies
+    private let listViewModel: UserListViewModel
 
     init() {
         let dependencies = AppDependencies.live()
-        _viewModel = State(
-            wrappedValue: UserListViewModel(
-                getUsers: dependencies.getUsers,
-                searchUsers: dependencies.searchUsers
-            )
+        self.dependencies = dependencies
+        listViewModel = UserListViewModel(
+            getUsers: dependencies.getUsers,
+            searchUsers: dependencies.searchUsers
         )
     }
 
     var body: some Scene {
         WindowGroup {
-            UserListView(viewModel: viewModel)
+            UserListView(viewModel: listViewModel) { user in
+                UserDetailView(
+                    viewModel: UserDetailViewModel(
+                        userID: user.id,
+                        getUserDetails: dependencies.getUserDetails
+                    )
+                )
+            }
         }
     }
 }
