@@ -16,7 +16,7 @@ struct UserRepositoryIntegrationTests {
     @Test("Fetches, decodes and maps a page all the way to domain entities")
     func fetchesFirstPage() async throws {
         let stack = TestStack()
-        stack.stub.setStub(.ok(Fixtures.usersPage))
+        stack.networkMock.setResponse(.ok(Fixtures.usersPage))
 
         let page = try await stack.repository.users(limit: 2, skip: 0)
 
@@ -31,7 +31,7 @@ struct UserRepositoryIntegrationTests {
     @Test("Paginates: the second request uses the offset the first page reported")
     func paginatesAcrossTwoRealRequests() async throws {
         let stack = TestStack()
-        stack.stub.setHandler { request in
+        stack.networkMock.setHandler { request in
             let query = request.url?.query ?? ""
             return query.contains("skip=2") ? .ok(Fixtures.usersPageTwo) : .ok(Fixtures.usersPage)
         }
@@ -43,14 +43,14 @@ struct UserRepositoryIntegrationTests {
         #expect(second.items.map(\.id) == [3])
         #expect(second.skip == 2)
         // Two distinct requests actually left the repository.
-        #expect(stack.stub.recordedURLs.count == 2)
-        #expect(stack.stub.recordedURLs[1].contains("skip=2"))
+        #expect(stack.networkMock.recordedURLs.count == 2)
+        #expect(stack.networkMock.recordedURLs[1].contains("skip=2"))
     }
 
     @Test("The final page reports no further offset, terminating infinite scroll")
     func stopsAtLastPage() async throws {
         let stack = TestStack()
-        stack.stub.setStub(.ok(Fixtures.usersLastPage))
+        stack.networkMock.setResponse(.ok(Fixtures.usersLastPage))
 
         let page = try await stack.repository.users(limit: 2, skip: 207)
 
@@ -61,7 +61,7 @@ struct UserRepositoryIntegrationTests {
     @Test("An empty collection is a success with no items, not an error")
     func emptyCollectionIsNotAnError() async throws {
         let stack = TestStack()
-        stack.stub.setStub(.ok(Fixtures.emptyPage))
+        stack.networkMock.setResponse(.ok(Fixtures.emptyPage))
 
         let page = try await stack.repository.users(limit: 30, skip: 0)
 
@@ -75,13 +75,13 @@ struct UserRepositoryIntegrationTests {
     @Test("Search hits /users/search and maps the subset")
     func searchesUsers() async throws {
         let stack = TestStack()
-        stack.stub.setStub(.ok(Fixtures.searchResults))
+        stack.networkMock.setResponse(.ok(Fixtures.searchResults))
 
         let page = try await stack.repository.searchUsers(query: "Emily", limit: 30, skip: 0)
 
         #expect(page.items.count == 1)
         #expect(page.items.first?.firstName == "Emily")
-        let url = try #require(stack.stub.recordedURLs.first)
+        let url = try #require(stack.networkMock.recordedURLs.first)
         #expect(url.contains("/users/search"))
         #expect(url.contains("q=Emily"))
     }
@@ -89,24 +89,24 @@ struct UserRepositoryIntegrationTests {
     @Test("A blank query short-circuits: no request, empty page")
     func blankSearchDoesNotHitTheNetwork() async throws {
         let stack = TestStack()
-        stack.stub.setStub(.ok(Fixtures.searchResults))
+        stack.networkMock.setResponse(.ok(Fixtures.searchResults))
 
         let page = try await stack.repository.searchUsers(query: "   ", limit: 30, skip: 0)
 
         #expect(page.items.isEmpty)
         // `q=` would return the *unfiltered* collection, which reads as "search matched
         // everything". Not sending the request at all is the correct behaviour.
-        #expect(stack.stub.recordedURLs.isEmpty)
+        #expect(stack.networkMock.recordedURLs.isEmpty)
     }
 
     @Test("Search terms are trimmed before they reach the wire")
     func trimsSearchQuery() async throws {
         let stack = TestStack()
-        stack.stub.setStub(.ok(Fixtures.searchResults))
+        stack.networkMock.setResponse(.ok(Fixtures.searchResults))
 
         _ = try await stack.repository.searchUsers(query: "  Emily  ", limit: 30, skip: 0)
 
-        let url = try #require(stack.stub.recordedURLs.first)
+        let url = try #require(stack.networkMock.recordedURLs.first)
         #expect(url.contains("q=Emily&"))
     }
 
@@ -115,7 +115,7 @@ struct UserRepositoryIntegrationTests {
     @Test("Fetches and maps a full profile, ignoring fields we chose not to model")
     func fetchesUserDetails() async throws {
         let stack = TestStack()
-        stack.stub.setStub(.ok(Fixtures.userDetails))
+        stack.networkMock.setResponse(.ok(Fixtures.userDetails))
 
         let details = try await stack.repository.userDetails(id: 1)
 
@@ -125,7 +125,7 @@ struct UserRepositoryIntegrationTests {
         #expect(details.company?.title == "Sales Manager")
         #expect(details.address?.city == "Phoenix")
         #expect(details.birthDate != nil)
-        #expect(stack.stub.recordedURLs.first?.hasSuffix("/users/1") == true)
+        #expect(stack.networkMock.recordedURLs.first?.hasSuffix("/users/1") == true)
     }
 
     // MARK: - Error translation
@@ -133,7 +133,7 @@ struct UserRepositoryIntegrationTests {
     @Test("404 on a detail fetch becomes .notFound, the case the detail screen renders")
     func missingUserBecomesNotFound() async {
         let stack = TestStack()
-        stack.stub.setStub(.status(404, body: Fixtures.notFound))
+        stack.networkMock.setResponse(.status(404, body: Fixtures.notFound))
 
         await #expect(throws: DomainError.notFound) {
             _ = try await stack.repository.userDetails(id: 9999)
@@ -143,7 +143,7 @@ struct UserRepositoryIntegrationTests {
     @Test("A server fault keeps its status code so the UI can offer a retry")
     func serverFaultBecomesServerError() async {
         let stack = TestStack()
-        stack.stub.setStub(.status(503))
+        stack.networkMock.setResponse(.status(503))
 
         await #expect(throws: DomainError.server(statusCode: 503)) {
             _ = try await stack.repository.users(limit: 30, skip: 0)
@@ -153,7 +153,7 @@ struct UserRepositoryIntegrationTests {
     @Test("Being offline surfaces as .notConnected, not a generic failure")
     func offlineBecomesNotConnected() async {
         let stack = TestStack()
-        stack.stub.setStub(.failure(.notConnectedToInternet))
+        stack.networkMock.setResponse(.failure(.notConnectedToInternet))
 
         await #expect(throws: DomainError.notConnected) {
             _ = try await stack.repository.users(limit: 30, skip: 0)
@@ -163,7 +163,7 @@ struct UserRepositoryIntegrationTests {
     @Test("A timeout surfaces as .timedOut")
     func timeoutBecomesTimedOut() async {
         let stack = TestStack()
-        stack.stub.setStub(.failure(.timedOut))
+        stack.networkMock.setResponse(.failure(.timedOut))
 
         await #expect(throws: DomainError.timedOut) {
             _ = try await stack.repository.users(limit: 30, skip: 0)
@@ -173,7 +173,7 @@ struct UserRepositoryIntegrationTests {
     @Test("An unparseable payload surfaces as .invalidResponse, never as a crash")
     func malformedPayloadBecomesInvalidResponse() async {
         let stack = TestStack()
-        stack.stub.setStub(.ok(Fixtures.malformedPage))
+        stack.networkMock.setResponse(.ok(Fixtures.malformedPage))
 
         await #expect(throws: DomainError.invalidResponse) {
             _ = try await stack.repository.users(limit: 30, skip: 0)

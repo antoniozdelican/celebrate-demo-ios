@@ -4,25 +4,25 @@ import Foundation
 /// **real** Alamofire stack — real `Session`, real validation, real serialization —
 /// without a socket.
 ///
-/// Each test owns its own ``NetworkStub``; requests are routed back to the right one by
+/// Each test owns its own ``NetworkMock``; requests are routed back to the right one by
 /// a header stamped on that test's session configuration. That keeps the suites free of
 /// shared mutable state, so Swift Testing can run them in parallel.
-final class StubURLProtocol: URLProtocol {
+final class MockURLProtocol: URLProtocol {
     override class func canInit(with request: URLRequest) -> Bool {
-        NetworkStub.stubID(for: request) != nil
+        NetworkMock.mockID(for: request) != nil
     }
 
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
     override func startLoading() {
-        guard let stub = NetworkStub.registered(for: request) else {
+        guard let mock = NetworkMock.registered(for: request) else {
             client?.urlProtocol(self, didFailWithError: URLError(.unsupportedURL))
             return
         }
 
-        stub.record(request)
+        mock.record(request)
 
-        guard let response = stub.response(for: request) else {
+        guard let response = mock.response(for: request) else {
             client?.urlProtocol(self, didFailWithError: URLError(.unsupportedURL))
             return
         }
@@ -48,42 +48,42 @@ final class StubURLProtocol: URLProtocol {
     override func stopLoading() {}
 }
 
-/// What ``StubURLProtocol`` should reply with.
-struct Stub: Sendable {
+/// What ``MockURLProtocol`` should reply with.
+struct MockResponse: Sendable {
     var statusCode: Int = 200
     var data: Data?
     var error: URLError?
 
-    static func ok(_ data: Data) -> Stub { Stub(statusCode: 200, data: data) }
-    static func status(_ code: Int, body: Data? = nil) -> Stub { Stub(statusCode: code, data: body) }
-    static func failure(_ code: URLError.Code) -> Stub { Stub(error: URLError(code)) }
+    static func ok(_ data: Data) -> MockResponse { MockResponse(statusCode: 200, data: data) }
+    static func status(_ code: Int, body: Data? = nil) -> MockResponse { MockResponse(statusCode: code, data: body) }
+    static func failure(_ code: URLError.Code) -> MockResponse { MockResponse(error: URLError(code)) }
 }
 
 /// One test's canned responses, and the requests it received.
 ///
 /// Guarded by a lock rather than an actor because `URLProtocol.startLoading()` is
 /// synchronous and runs off the test's task.
-final class NetworkStub: @unchecked Sendable {
+final class NetworkMock: @unchecked Sendable {
     /// Identifies which stub a request belongs to. Stamped on the test session's
     /// `httpAdditionalHeaders`, so production code never learns it exists.
-    static let headerField = "X-Celebrate-Stub-ID"
+    static let headerField = "X-Celebrate-Mock-ID"
 
     let id = UUID().uuidString
 
     private let lock = NSLock()
-    private var handler: (@Sendable (URLRequest) -> Stub?)?
+    private var handler: (@Sendable (URLRequest) -> MockResponse?)?
     private var requests: [URLRequest] = []
 
     init() { Self.registry.add(self) }
     deinit { Self.registry.remove(id) }
 
     /// Replies with `stub` to every request.
-    func setStub(_ stub: Stub) {
-        setHandler { _ in stub }
+    func setResponse(_ response: MockResponse) {
+        setHandler { _ in response }
     }
 
     /// Replies based on the request — used to give page 1 and page 2 different bodies.
-    func setHandler(_ handler: @escaping @Sendable (URLRequest) -> Stub?) {
+    func setHandler(_ handler: @escaping @Sendable (URLRequest) -> MockResponse?) {
         lock.withLock {
             self.handler = handler
             self.requests = []
@@ -95,7 +95,7 @@ final class NetworkStub: @unchecked Sendable {
 
     var recordedURLs: [String] { recordedRequests.compactMap { $0.url?.absoluteString } }
 
-    fileprivate func response(for request: URLRequest) -> Stub? {
+    fileprivate func response(for request: URLRequest) -> MockResponse? {
         lock.withLock { handler?(request) }
     }
 
@@ -105,22 +105,22 @@ final class NetworkStub: @unchecked Sendable {
 
     // MARK: - Routing
 
-    fileprivate static func stubID(for request: URLRequest) -> String? {
+    fileprivate static func mockID(for request: URLRequest) -> String? {
         request.value(forHTTPHeaderField: headerField)
     }
 
-    fileprivate static func registered(for request: URLRequest) -> NetworkStub? {
-        stubID(for: request).flatMap { registry.stub(id: $0) }
+    fileprivate static func registered(for request: URLRequest) -> NetworkMock? {
+        mockID(for: request).flatMap { registry.mock(id: $0) }
     }
 
     private static let registry = Registry()
 
     private final class Registry: @unchecked Sendable {
         private let lock = NSLock()
-        private var stubs: [String: NetworkStub] = [:]
+        private var mocks: [String: NetworkMock] = [:]
 
-        func add(_ stub: NetworkStub) { lock.withLock { stubs[stub.id] = stub } }
-        func remove(_ id: String) { lock.withLock { stubs[id] = nil } }
-        func stub(id: String) -> NetworkStub? { lock.withLock { stubs[id] } }
+        func add(_ mock: NetworkMock) { lock.withLock { mocks[mock.id] = mock } }
+        func remove(_ id: String) { lock.withLock { mocks[id] = nil } }
+        func mock(id: String) -> NetworkMock? { lock.withLock { mocks[id] } }
     }
 }

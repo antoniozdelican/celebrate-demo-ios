@@ -5,7 +5,7 @@ import Foundation
 ///
 /// Hand-written rather than generated: Swift has no runtime mocking, and a fake this
 /// small is clearer than any framework that would produce it.
-final class HTTPClientSpy: HTTPClientProtocol, @unchecked Sendable {
+final class HTTPClientMock: HTTPClientProtocol, @unchecked Sendable {
     /// What `send` should do next. Success carries `Data`, so the spy still exercises the
     /// real response shape rather than letting a wrong type slip through.
     enum Outcome: Sendable {

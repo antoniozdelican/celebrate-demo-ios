@@ -7,8 +7,8 @@ import Testing
 struct UserDetailViewModelTests {
     private func makeSUT(
         userID: Int = 1,
-        getUserDetails: GetUserDetailsInteractorStub = .init(),
-        formatBirthDate: FormatBirthDateInteractorStub = .init()
+        getUserDetails: GetUserDetailsInteractorMock = .init(),
+        formatBirthDate: FormatBirthDateInteractorMock = .init()
     ) -> UserDetailViewModel {
         UserDetailViewModel(
             userID: userID,
@@ -19,7 +19,7 @@ struct UserDetailViewModelTests {
 
     @Test("Starts loading, then shows the profile for the requested identifier")
     func loadsProfile() async {
-        let getUserDetails = GetUserDetailsInteractorStub()
+        let getUserDetails = GetUserDetailsInteractorMock()
         let sut = makeSUT(userID: 7, getUserDetails: getUserDetails)
 
         #expect(sut.state == .loading)
@@ -27,14 +27,14 @@ struct UserDetailViewModelTests {
         await sut.load()
 
         #expect(getUserDetails.ids == [7])
-        #expect(sut.state == .loaded(.stub))
+        #expect(sut.state == .loaded(.fixture))
     }
 
     @Test("Loading again after the profile is on screen does not refetch")
     func doesNotRefetchOnceLoaded() async {
         // `.task` can run more than once for the same view identity; refetching would
         // replace a rendered profile with a spinner.
-        let getUserDetails = GetUserDetailsInteractorStub()
+        let getUserDetails = GetUserDetailsInteractorMock()
         let sut = makeSUT(getUserDetails: getUserDetails)
 
         await sut.load()
@@ -45,7 +45,7 @@ struct UserDetailViewModelTests {
 
     @Test("A missing user becomes .notFound, which the screen renders without a retry")
     func missingUser() async {
-        let getUserDetails = GetUserDetailsInteractorStub()
+        let getUserDetails = GetUserDetailsInteractorMock()
         getUserDetails.result = .failure(.notFound)
         let sut = makeSUT(userID: 9999, getUserDetails: getUserDetails)
 
@@ -57,7 +57,7 @@ struct UserDetailViewModelTests {
 
     @Test("A recoverable failure becomes .failed and stays retryable")
     func recoverableFailure() async {
-        let getUserDetails = GetUserDetailsInteractorStub()
+        let getUserDetails = GetUserDetailsInteractorMock()
         getUserDetails.result = .failure(.notConnected)
         let sut = makeSUT(getUserDetails: getUserDetails)
 
@@ -70,7 +70,7 @@ struct UserDetailViewModelTests {
     @Test("A cancelled load leaves the state alone rather than showing an error")
     func cancellationIsNotAnError() async {
         // Popping the screen mid-request cancels it; that is not a failure to report.
-        let getUserDetails = GetUserDetailsInteractorStub()
+        let getUserDetails = GetUserDetailsInteractorMock()
         getUserDetails.result = .failure(.cancelled)
         let sut = makeSUT(getUserDetails: getUserDetails)
 
@@ -81,30 +81,30 @@ struct UserDetailViewModelTests {
 
     @Test("Retry goes back through loading and can recover")
     func retryRecovers() async {
-        let getUserDetails = GetUserDetailsInteractorStub()
+        let getUserDetails = GetUserDetailsInteractorMock()
         getUserDetails.result = .failure(.timedOut)
         let sut = makeSUT(getUserDetails: getUserDetails)
 
         await sut.load()
         #expect(sut.state == .failed(.timedOut))
 
-        getUserDetails.result = .success(.stub)
+        getUserDetails.result = .success(.fixture)
         await sut.retry()
 
-        #expect(sut.state == .loaded(.stub))
+        #expect(sut.state == .loaded(.fixture))
         #expect(getUserDetails.callCount == 2)
     }
 
     @Test("Birth dates are formatted through the interactor, not in the view")
     func formatsBirthDate() {
-        let sut = makeSUT(formatBirthDate: FormatBirthDateInteractorStub(output: "30 May 1996"))
+        let sut = makeSUT(formatBirthDate: FormatBirthDateInteractorMock(output: "30 May 1996"))
 
         #expect(sut.formattedBirthDate(Date(timeIntervalSince1970: 0)) == "30 May 1996")
     }
 
     @Test("Retry asks for the same user it was created for")
     func retryKeepsIdentifier() async {
-        let getUserDetails = GetUserDetailsInteractorStub()
+        let getUserDetails = GetUserDetailsInteractorMock()
         getUserDetails.result = .failure(.timedOut)
         let sut = makeSUT(userID: 42, getUserDetails: getUserDetails)
 

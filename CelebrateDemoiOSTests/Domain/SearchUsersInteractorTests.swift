@@ -6,7 +6,7 @@ import Testing
 struct SearchUsersInteractorTests {
     @Test("Searches with the term trimmed, at the same page size as the list")
     func searchesTrimmedTerm() async throws {
-        let repository = UserRepositoryStub()
+        let repository = UserRepositoryMock()
         let sut = SearchUsersInteractor(repository: repository)
 
         _ = try await sut.execute(query: "  Emily  ", skip: 0)
@@ -27,7 +27,7 @@ struct SearchUsersInteractorTests {
         arguments: ["", "   ", "\n\t "]
     )
     func blankTermMakesNoRequest(query: String) async throws {
-        let repository = UserRepositoryStub()
+        let repository = UserRepositoryMock()
         let sut = SearchUsersInteractor(repository: repository)
 
         let page = try await sut.execute(query: query, skip: 0)
@@ -38,7 +38,7 @@ struct SearchUsersInteractorTests {
 
     @Test("The offset is passed through for paginated search results")
     func forwardsSkip() async throws {
-        let repository = UserRepositoryStub()
+        let repository = UserRepositoryMock()
         let sut = SearchUsersInteractor(repository: repository)
 
         _ = try await sut.execute(query: "Emily", skip: 30)
@@ -48,7 +48,7 @@ struct SearchUsersInteractorTests {
 
     @Test("Repository failures propagate untouched")
     func propagatesFailure() async {
-        let repository = UserRepositoryStub()
+        let repository = UserRepositoryMock()
         repository.usersResult = .failure(.timedOut)
         let sut = SearchUsersInteractor(repository: repository)
 

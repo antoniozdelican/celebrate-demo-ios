@@ -8,8 +8,8 @@ struct UserListViewModelTests {
     /// Debounce is zeroed so tests assert behaviour rather than wait on a timer. The
     /// debounce itself is covered separately, in `debouncesSearch`.
     private func makeSUT(
-        getUsers: GetUsersInteractorStub = .init(),
-        searchUsers: SearchUsersInteractorStub = .init(),
+        getUsers: GetUsersInteractorMock = .init(),
+        searchUsers: SearchUsersInteractorMock = .init(),
         debounce: Duration = .zero
     ) -> UserListViewModel {
         UserListViewModel(
@@ -23,8 +23,8 @@ struct UserListViewModelTests {
 
     @Test("Starts loading, then shows the first page")
     func loadsFirstPage() async {
-        let getUsers = GetUsersInteractorStub()
-        getUsers.result = .success(.stub(count: 3, total: 208))
+        let getUsers = GetUsersInteractorMock()
+        getUsers.result = .success(.fixture(count: 3, total: 208))
         let sut = makeSUT(getUsers: getUsers)
 
         #expect(sut.state == .loading)
@@ -41,8 +41,8 @@ struct UserListViewModelTests {
 
     @Test("An empty collection is an empty state, not an error")
     func emptyCollection() async {
-        let getUsers = GetUsersInteractorStub()
-        getUsers.result = .success(.stub(count: 0, total: 0))
+        let getUsers = GetUsersInteractorMock()
+        getUsers.result = .success(.fixture(count: 0, total: 0))
         let sut = makeSUT(getUsers: getUsers)
 
         await sut.load()
@@ -52,7 +52,7 @@ struct UserListViewModelTests {
 
     @Test("A failure becomes a failed state carrying the domain error")
     func failure() async {
-        let getUsers = GetUsersInteractorStub()
+        let getUsers = GetUsersInteractorMock()
         getUsers.result = .failure(.notConnected)
         let sut = makeSUT(getUsers: getUsers)
 
@@ -64,7 +64,7 @@ struct UserListViewModelTests {
     @Test("A cancelled load leaves the state alone rather than showing an error")
     func cancellationIsNotAnError() async {
         // A superseded search keystroke must not flash an error at the user.
-        let getUsers = GetUsersInteractorStub()
+        let getUsers = GetUsersInteractorMock()
         getUsers.result = .failure(.cancelled)
         let sut = makeSUT(getUsers: getUsers)
 
@@ -77,9 +77,9 @@ struct UserListViewModelTests {
 
     @Test("A query switches to the search use case")
     func searchesWhenQueryPresent() async {
-        let getUsers = GetUsersInteractorStub()
-        let searchUsers = SearchUsersInteractorStub()
-        searchUsers.result = .success(.stub(count: 1, total: 1))
+        let getUsers = GetUsersInteractorMock()
+        let searchUsers = SearchUsersInteractorMock()
+        searchUsers.result = .success(.fixture(count: 1, total: 1))
         let sut = makeSUT(getUsers: getUsers, searchUsers: searchUsers)
 
         await sut.load()
@@ -92,9 +92,9 @@ struct UserListViewModelTests {
 
     @Test("Clearing the query returns to the unfiltered list")
     func clearingQueryReloadsList() async {
-        let getUsers = GetUsersInteractorStub()
-        getUsers.result = .success(.stub(count: 3, total: 208))
-        let searchUsers = SearchUsersInteractorStub()
+        let getUsers = GetUsersInteractorMock()
+        getUsers.result = .success(.fixture(count: 3, total: 208))
+        let searchUsers = SearchUsersInteractorMock()
         let sut = makeSUT(getUsers: getUsers, searchUsers: searchUsers)
 
         await sut.load()
@@ -109,8 +109,8 @@ struct UserListViewModelTests {
 
     @Test("A whitespace-only query is not a search")
     func whitespaceQueryIsNotASearch() async {
-        let getUsers = GetUsersInteractorStub()
-        let searchUsers = SearchUsersInteractorStub()
+        let getUsers = GetUsersInteractorMock()
+        let searchUsers = SearchUsersInteractorMock()
         let sut = makeSUT(getUsers: getUsers, searchUsers: searchUsers)
 
         sut.query = "   "
@@ -122,8 +122,8 @@ struct UserListViewModelTests {
 
     @Test("No matches reports the query so the UI can name it")
     func noMatches() async {
-        let searchUsers = SearchUsersInteractorStub()
-        searchUsers.result = .success(.stub(count: 0, total: 0))
+        let searchUsers = SearchUsersInteractorMock()
+        searchUsers.result = .success(.fixture(count: 0, total: 0))
         let sut = makeSUT(searchUsers: searchUsers)
 
         await sut.load()
@@ -135,7 +135,7 @@ struct UserListViewModelTests {
 
     @Test("A superseded search never reaches the interactor")
     func debouncesSearch() async {
-        let searchUsers = SearchUsersInteractorStub()
+        let searchUsers = SearchUsersInteractorMock()
         let sut = makeSUT(searchUsers: searchUsers, debounce: .milliseconds(200))
 
         await sut.load()
@@ -157,10 +157,10 @@ struct UserListViewModelTests {
 
     @Test("Loading more appends the next page and advances the offset")
     func loadsMore() async {
-        let getUsers = GetUsersInteractorStub()
+        let getUsers = GetUsersInteractorMock()
         getUsers.pages = [
-            0: .stub(count: 3, skip: 0, total: 6),
-            3: .stub(count: 3, skip: 3, total: 6),
+            0: .fixture(count: 3, skip: 0, total: 6),
+            3: .fixture(count: 3, skip: 3, total: 6),
         ]
         let sut = makeSUT(getUsers: getUsers)
 
@@ -177,8 +177,8 @@ struct UserListViewModelTests {
 
     @Test("The last page stops pagination")
     func stopsAtLastPage() async {
-        let getUsers = GetUsersInteractorStub()
-        getUsers.result = .success(.stub(count: 3, total: 3))
+        let getUsers = GetUsersInteractorMock()
+        getUsers.result = .success(.fixture(count: 3, total: 3))
         let sut = makeSUT(getUsers: getUsers)
 
         await sut.load()
@@ -190,8 +190,8 @@ struct UserListViewModelTests {
 
     @Test("A failure while paginating keeps the rows already on screen")
     func paginationFailureKeepsExistingRows() async {
-        let getUsers = GetUsersInteractorStub()
-        getUsers.pages = [0: .stub(count: 3, skip: 0, total: 6)]
+        let getUsers = GetUsersInteractorMock()
+        getUsers.pages = [0: .fixture(count: 3, skip: 0, total: 6)]
         let sut = makeSUT(getUsers: getUsers)
 
         await sut.load()
@@ -212,8 +212,8 @@ struct UserListViewModelTests {
 
     @Test("Refresh replaces the contents rather than appending")
     func refreshReplaces() async {
-        let getUsers = GetUsersInteractorStub()
-        getUsers.pages = [0: .stub(count: 3, skip: 0, total: 6)]
+        let getUsers = GetUsersInteractorMock()
+        getUsers.pages = [0: .fixture(count: 3, skip: 0, total: 6)]
         let sut = makeSUT(getUsers: getUsers)
 
         await sut.load()
@@ -228,14 +228,14 @@ struct UserListViewModelTests {
 
     @Test("Retry goes back through loading and can recover")
     func retryRecovers() async {
-        let getUsers = GetUsersInteractorStub()
+        let getUsers = GetUsersInteractorMock()
         getUsers.result = .failure(.timedOut)
         let sut = makeSUT(getUsers: getUsers)
 
         await sut.load()
         #expect(sut.state == .failed(.timedOut))
 
-        getUsers.result = .success(.stub(count: 2, total: 2))
+        getUsers.result = .success(.fixture(count: 2, total: 2))
         await sut.retry()
 
         guard case .loaded(let users) = sut.state else {

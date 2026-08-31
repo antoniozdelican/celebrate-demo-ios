@@ -8,7 +8,7 @@ import Testing
 struct GetUsersInteractorTests {
     @Test("Loads the unfiltered list at the domain's page size")
     func loadsList() async throws {
-        let repository = UserRepositoryStub()
+        let repository = UserRepositoryMock()
         let sut = GetUsersInteractor(repository: repository)
 
         _ = try await sut.execute(skip: 0)
@@ -18,7 +18,7 @@ struct GetUsersInteractorTests {
 
     @Test("The offset is passed through so pagination continues where the last page ended")
     func forwardsSkip() async throws {
-        let repository = UserRepositoryStub()
+        let repository = UserRepositoryMock()
         let sut = GetUsersInteractor(repository: repository)
 
         _ = try await sut.execute(skip: 60)
@@ -28,8 +28,8 @@ struct GetUsersInteractorTests {
 
     @Test("The page is returned unchanged — the interactor does not reshape data")
     func returnsRepositoryPage() async throws {
-        let repository = UserRepositoryStub()
-        let page = Page(items: [User.stub()], total: 208, skip: 0, limit: GetUsersInteractor.pageSize)
+        let repository = UserRepositoryMock()
+        let page = Page(items: [User.fixture()], total: 208, skip: 0, limit: GetUsersInteractor.pageSize)
         repository.usersResult = .success(page)
         let sut = GetUsersInteractor(repository: repository)
 
@@ -43,7 +43,7 @@ struct GetUsersInteractorTests {
 
     @Test("Repository failures propagate untouched")
     func propagatesFailure() async {
-        let repository = UserRepositoryStub()
+        let repository = UserRepositoryMock()
         repository.usersResult = .failure(.notConnected)
         let sut = GetUsersInteractor(repository: repository)
 

@@ -6,7 +6,7 @@ import Testing
 struct GetUserDetailsInteractorTests {
     @Test("Asks the repository for the requested identifier")
     func requestsIdentifier() async throws {
-        let repository = UserRepositoryStub()
+        let repository = UserRepositoryMock()
         let sut = GetUserDetailsInteractor(repository: repository)
 
         _ = try await sut.execute(id: 7)
@@ -16,15 +16,15 @@ struct GetUserDetailsInteractorTests {
 
     @Test("Returns the profile unchanged")
     func returnsDetails() async throws {
-        let repository = UserRepositoryStub()
+        let repository = UserRepositoryMock()
         let sut = GetUserDetailsInteractor(repository: repository)
 
-        #expect(try await sut.execute(id: 1) == .stub)
+        #expect(try await sut.execute(id: 1) == .fixture)
     }
 
     @Test("A missing user propagates as .notFound for the detail screen to render")
     func propagatesNotFound() async {
-        let repository = UserRepositoryStub()
+        let repository = UserRepositoryMock()
         repository.detailsResult = .failure(.notFound)
         let sut = GetUserDetailsInteractor(repository: repository)
 

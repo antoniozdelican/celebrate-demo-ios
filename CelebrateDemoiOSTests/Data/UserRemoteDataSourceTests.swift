@@ -7,7 +7,7 @@ import Testing
 struct UserRemoteDataSourceTests {
     @Test("Decodes a page and forwards the pagination envelope untouched")
     func decodesUsersPage() async throws {
-        let client = HTTPClientSpy(outcome: .success(Fixtures.usersPage))
+        let client = HTTPClientMock(outcome: .success(Fixtures.usersPage))
         let sut = UserRemoteDataSource(client: client)
 
         let page = try await sut.users(limit: 2, skip: 0)
@@ -21,7 +21,7 @@ struct UserRemoteDataSourceTests {
 
     @Test("The list request carries limit, skip and the trimmed field selection")
     func buildsListRequest() async throws {
-        let client = HTTPClientSpy(outcome: .success(Fixtures.usersPage))
+        let client = HTTPClientMock(outcome: .success(Fixtures.usersPage))
         let sut = UserRemoteDataSource(client: client)
 
         _ = try await sut.users(limit: 50, skip: 100)
@@ -37,7 +37,7 @@ struct UserRemoteDataSourceTests {
 
     @Test("The search request hits /users/search and sends the term verbatim under `q`")
     func buildsSearchRequest() async throws {
-        let client = HTTPClientSpy(outcome: .success(Fixtures.searchResults))
+        let client = HTTPClientMock(outcome: .success(Fixtures.searchResults))
         let sut = UserRemoteDataSource(client: client)
 
         _ = try await sut.searchUsers(query: "John Doe", limit: 20, skip: 0)
@@ -51,7 +51,7 @@ struct UserRemoteDataSourceTests {
 
     @Test("The detail request interpolates the identifier and asks for the full record")
     func buildsDetailRequest() async throws {
-        let client = HTTPClientSpy(outcome: .success(Fixtures.userDetails))
+        let client = HTTPClientMock(outcome: .success(Fixtures.userDetails))
         let sut = UserRemoteDataSource(client: client)
 
         _ = try await sut.userDetails(id: 7)
@@ -65,7 +65,7 @@ struct UserRemoteDataSourceTests {
     @Test("Ignores the fields we deliberately do not model")
     func ignoresUnmodelledFields() async throws {
         // `password`, `ssn` and `bloodGroup` are in the fixture and absent from the response model.
-        let client = HTTPClientSpy(outcome: .success(Fixtures.userDetails))
+        let client = HTTPClientMock(outcome: .success(Fixtures.userDetails))
         let sut = UserRemoteDataSource(client: client)
 
         let details = try await sut.userDetails(id: 1)
@@ -76,7 +76,7 @@ struct UserRemoteDataSourceTests {
 
     @Test("Propagates transport failures unchanged — translation is not its job")
     func propagatesTransportError() async {
-        let client = HTTPClientSpy(outcome: .failure(.status(code: 500, data: nil)))
+        let client = HTTPClientMock(outcome: .failure(.status(code: 500, data: nil)))
         let sut = UserRemoteDataSource(client: client)
 
         await #expect(throws: HTTPError.status(code: 500, data: nil)) {
@@ -86,7 +86,7 @@ struct UserRemoteDataSourceTests {
 
     @Test("Reports a shape mismatch as a decoding failure")
     func reportsDecodingFailure() async {
-        let client = HTTPClientSpy(outcome: .success(Fixtures.malformedPage))
+        let client = HTTPClientMock(outcome: .success(Fixtures.malformedPage))
         let sut = UserRemoteDataSource(client: client)
 
         await #expect(throws: HTTPError.self) {
