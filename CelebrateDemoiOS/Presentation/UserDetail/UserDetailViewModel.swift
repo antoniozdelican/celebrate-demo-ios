@@ -7,6 +7,7 @@ protocol UserDetailViewModelProtocol: AnyObject, Observable {
 
     func load() async
     func retry() async
+    func formattedBirthDate(_ date: Date) -> String
 }
 
 @MainActor
@@ -16,10 +17,20 @@ final class UserDetailViewModel: UserDetailViewModelProtocol {
 
     private let userID: Int
     private let getUserDetailsInteractor: any GetUserDetailsInteractorProtocol
+    private let formatBirthDateInteractor: any FormatBirthDateInteractorProtocol
 
-    init(userID: Int, getUserDetailsInteractor: any GetUserDetailsInteractorProtocol) {
+    init(
+        userID: Int,
+        getUserDetailsInteractor: any GetUserDetailsInteractorProtocol,
+        formatBirthDateInteractor: any FormatBirthDateInteractorProtocol
+    ) {
         self.userID = userID
         self.getUserDetailsInteractor = getUserDetailsInteractor
+        self.formatBirthDateInteractor = formatBirthDateInteractor
+    }
+
+    func formattedBirthDate(_ date: Date) -> String {
+        formatBirthDateInteractor.execute(date)
     }
 
     func load() async {

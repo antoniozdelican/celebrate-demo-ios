@@ -58,6 +58,12 @@ final class GetUserDetailsInteractorStub: GetUserDetailsInteractorProtocol, @unc
     }
 }
 
+struct FormatBirthDateInteractorStub: FormatBirthDateInteractorProtocol {
+    var output = "30 May 1996"
+
+    func execute(_ date: Date) -> String { output }
+}
+
 extension Page where Item == User {
     /// A page of `count` users starting at `skip`, with `total` items available overall.
     static func stub(count: Int, skip: Int = 0, total: Int) -> Page<User> {

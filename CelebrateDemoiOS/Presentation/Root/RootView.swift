@@ -22,7 +22,8 @@ struct RootView: View {
             UserDetailView(
                 viewModel: UserDetailViewModel(
                     userID: userID,
-                    getUserDetailsInteractor: dependencies.getUserDetailsInteractor
+                    getUserDetailsInteractor: dependencies.getUserDetailsInteractor,
+                    formatBirthDateInteractor: dependencies.formatBirthDateInteractor
                 )
             )
         }

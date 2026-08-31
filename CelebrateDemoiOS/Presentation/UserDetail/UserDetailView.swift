@@ -1,7 +1,10 @@
 import SwiftUI
 
+private let scrollSpaceName = "userDetailScroll"
+
 struct UserDetailView<ViewModel: UserDetailViewModelProtocol>: View {
     @State private var viewModel: ViewModel
+    @State private var scrollOffset: CGFloat = 0
 
     init(viewModel: ViewModel) {
         _viewModel = State(wrappedValue: viewModel)
@@ -40,7 +43,9 @@ struct UserDetailView<ViewModel: UserDetailViewModelProtocol>: View {
     private func profile(_ details: UserDetails) -> some View {
         ScrollView {
             VStack(spacing: DSSpacing.xl) {
-                header(details)
+                Color.clear
+                    .frame(height: 0)
+                    .onScrollOffsetChange { scrollOffset = $0 }
 
                 if let company = details.company {
                     section("Work") {
@@ -65,30 +70,26 @@ struct UserDetailView<ViewModel: UserDetailViewModelProtocol>: View {
                 section("Personal") {
                     field("Age", details.age.map(String.init))
                     field("Gender", details.gender.title)
-                    field("Born", details.birthDate.map(BirthDateFormatter.string(from:)))
+                    field("Born", details.birthDate.map(viewModel.formattedBirthDate))
                     field("University", details.university)
                 }
             }
-            .padding(DSSpacing.lg)
+            .padding(.horizontal, DSSpacing.lg)
+            .padding(.bottom, DSSpacing.lg)
         }
-        .navigationTitle(details.fullName)
+        .coordinateSpace(name: scrollSpaceName)
+        .safeAreaInset(edge: .top, spacing: 0) {
+            CollapsibleHeader(
+                imageURL: details.imageURL,
+                initials: details.initials,
+                name: details.fullName,
+                subtitle: details.company?.title,
+                scrollOffset: scrollOffset
+            )
+        }
+        .navigationTitle(scrollOffset > CollapsibleHeader.collapseDistance * 0.9 ? details.fullName : "")
     }
 
-    private func header(_ details: UserDetails) -> some View {
-        VStack(spacing: DSSpacing.md) {
-            DSAvatar(url: details.imageURL, initials: details.initials, size: .large)
-
-            VStack(spacing: DSSpacing.xs) {
-                DSText(details.fullName, style: .largeTitle)
-                    .multilineTextAlignment(.center)
-
-                if let title = details.company?.title {
-                    DSText(title, style: .callout, role: .secondary)
-                }
-            }
-        }
-        .frame(maxWidth: .infinity)
-    }
 
     @ViewBuilder
     private func section<Content: View>(
@@ -119,37 +120,24 @@ struct UserDetailView<ViewModel: UserDetailViewModelProtocol>: View {
     }
 }
 
-private enum BirthDateFormatter {
-    private static let formatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.timeZone = TimeZone(secondsFromGMT: 0)
-        formatter.dateStyle = .long
-        formatter.timeStyle = .none
-        return formatter
-    }()
-
-    static func string(from date: Date) -> String {
-        formatter.string(from: date)
-    }
+private struct ScrollOffsetKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {}
 }
 
-private extension UserDetails {
-    var initials: String {
-        [firstName, lastName]
-            .compactMap(\.first)
-            .map(String.init)
-            .joined()
-            .uppercased()
-    }
-}
-
-private extension Gender {
-    var title: String? {
-        switch self {
-        case .male: "Male"
-        case .female: "Female"
-        case .other(let value): value.capitalized
-        case .unspecified: nil
+private extension View {
+    func onScrollOffsetChange(_ action: @escaping (CGFloat) -> Void) -> some View {
+        background {
+            GeometryReader { proxy in
+                Color.clear.preference(
+                    key: ScrollOffsetKey.self,
+                    value: -proxy.frame(in: .named(scrollSpaceName)).minY
+                )
+            }
         }
+        .onPreferenceChange(ScrollOffsetKey.self) { action($0) }
     }
 }
+
+
+

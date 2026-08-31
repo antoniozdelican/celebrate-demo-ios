@@ -7,9 +7,14 @@ import Testing
 struct UserDetailViewModelTests {
     private func makeSUT(
         userID: Int = 1,
-        getUserDetails: GetUserDetailsInteractorStub = .init()
+        getUserDetails: GetUserDetailsInteractorStub = .init(),
+        formatBirthDate: FormatBirthDateInteractorStub = .init()
     ) -> UserDetailViewModel {
-        UserDetailViewModel(userID: userID, getUserDetailsInteractor: getUserDetails)
+        UserDetailViewModel(
+            userID: userID,
+            getUserDetailsInteractor: getUserDetails,
+            formatBirthDateInteractor: formatBirthDate
+        )
     }
 
     @Test("Starts loading, then shows the profile for the requested identifier")
@@ -88,6 +93,13 @@ struct UserDetailViewModelTests {
 
         #expect(sut.state == .loaded(.stub))
         #expect(getUserDetails.callCount == 2)
+    }
+
+    @Test("Birth dates are formatted through the interactor, not in the view")
+    func formatsBirthDate() {
+        let sut = makeSUT(formatBirthDate: FormatBirthDateInteractorStub(output: "30 May 1996"))
+
+        #expect(sut.formattedBirthDate(Date(timeIntervalSince1970: 0)) == "30 May 1996")
     }
 
     @Test("Retry asks for the same user it was created for")

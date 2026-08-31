@@ -20,4 +20,12 @@ struct UserDetails: Identifiable, Equatable, Sendable {
     var fullName: String {
         "\(firstName) \(lastName)".trimmingCharacters(in: .whitespaces)
     }
+
+    var initials: String {
+        [firstName, lastName]
+            .compactMap(\.first)
+            .map(String.init)
+            .joined()
+            .uppercased()
+    }
 }

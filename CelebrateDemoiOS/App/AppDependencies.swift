@@ -17,6 +17,7 @@ struct AppDependencies {
     let getUsersInteractor: any GetUsersInteractorProtocol
     let searchUsersInteractor: any SearchUsersInteractorProtocol
     let getUserDetailsInteractor: any GetUserDetailsInteractorProtocol
+    let formatBirthDateInteractor: any FormatBirthDateInteractorProtocol
 
     /// The production graph, wired against the live DummyJSON API.
     ///
@@ -31,7 +32,8 @@ struct AppDependencies {
         return AppDependencies(
             getUsersInteractor: GetUsersInteractor(repository: repository),
             searchUsersInteractor: SearchUsersInteractor(repository: repository),
-            getUserDetailsInteractor: GetUserDetailsInteractor(repository: repository)
+            getUserDetailsInteractor: GetUserDetailsInteractor(repository: repository),
+            formatBirthDateInteractor: FormatBirthDateInteractor()
         )
     }
 }
