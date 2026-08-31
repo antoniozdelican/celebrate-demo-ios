@@ -14,9 +14,6 @@ struct SearchUsersInteractorTests {
         #expect(repository.calls == [.search(query: "Emily", limit: SearchUsersInteractor.pageSize, skip: 0)])
     }
 
-    /// The two page sizes are declared separately, so this guards the drift that
-    /// duplication invites: a search paginating differently from the list would break
-    /// `Page.nextSkip` arithmetic when switching between filtered and unfiltered.
     @Test("Search and list request the same page size")
     func sharesPageSizeWithList() {
         #expect(SearchUsersInteractor.pageSize == GetUsersInteractor.pageSize)

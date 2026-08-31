@@ -2,7 +2,6 @@ import Foundation
 import Testing
 @testable import CelebrateDemoiOS
 
-/// Unit tests: the data source against a fake transport. No Alamofire involved.
 @Suite("UserRemoteDataSource")
 struct UserRemoteDataSourceTests {
     @Test("Decodes a page and forwards the pagination envelope untouched")
@@ -31,7 +30,6 @@ struct UserRemoteDataSourceTests {
         #expect(request.method == .get)
         #expect(request.queryValue("limit") == "50")
         #expect(request.queryValue("skip") == "100")
-        // `select` is what keeps the list payload to 5 fields per user instead of ~30.
         #expect(request.queryValue("select") == "firstName,lastName,email,image,company")
     }
 
@@ -58,13 +56,11 @@ struct UserRemoteDataSourceTests {
 
         let request = try #require(client.requests.first)
         #expect(request.path == "users/7")
-        // No `select`: the detail screen needs every field.
         #expect(request.queryItems.isEmpty)
     }
 
     @Test("Ignores the fields we deliberately do not model")
     func ignoresUnmodelledFields() async throws {
-        // `password`, `ssn` and `bloodGroup` are in the fixture and absent from the response model.
         let client = HTTPClientMock(outcome: .success(Fixtures.userDetails))
         let sut = UserRemoteDataSource(client: client)
 

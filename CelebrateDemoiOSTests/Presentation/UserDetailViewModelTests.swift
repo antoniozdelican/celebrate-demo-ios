@@ -32,8 +32,6 @@ struct UserDetailViewModelTests {
 
     @Test("Loading again after the profile is on screen does not refetch")
     func doesNotRefetchOnceLoaded() async {
-        // `.task` can run more than once for the same view identity; refetching would
-        // replace a rendered profile with a spinner.
         let getUserDetails = GetUserDetailsInteractorMock()
         let sut = makeSUT(getUserDetails: getUserDetails)
 
@@ -69,7 +67,6 @@ struct UserDetailViewModelTests {
 
     @Test("A cancelled load leaves the state alone rather than showing an error")
     func cancellationIsNotAnError() async {
-        // Popping the screen mid-request cancels it; that is not a failure to report.
         let getUserDetails = GetUserDetailsInteractorMock()
         getUserDetails.result = .failure(.cancelled)
         let sut = makeSUT(getUserDetails: getUserDetails)

@@ -2,13 +2,6 @@ import Foundation
 import Testing
 @testable import CelebrateDemoiOS
 
-/// End-to-end through the data stack: `UserRepository` → `UserRemoteDataSource` →
-/// `HTTPClient` → Alamofire → stubbed wire. Nothing between the repository and the
-/// socket is mocked.
-///
-/// This is the suite that catches a wrong query parameter, a decoder misconfigured for
-/// the real payload, broken pagination arithmetic, or an error reaching the presentation
-/// layer as the wrong `DomainError`.
 @Suite("UserRepository (integration)")
 struct UserRepositoryIntegrationTests {
     // MARK: - Listing
@@ -42,7 +35,6 @@ struct UserRepositoryIntegrationTests {
 
         #expect(second.items.map(\.id) == [3])
         #expect(second.skip == 2)
-        // Two distinct requests actually left the repository.
         #expect(stack.networkMock.recordedURLs.count == 2)
         #expect(stack.networkMock.recordedURLs[1].contains("skip=2"))
     }
@@ -94,8 +86,6 @@ struct UserRepositoryIntegrationTests {
         let page = try await stack.repository.searchUsers(query: "   ", limit: 30, skip: 0)
 
         #expect(page.items.isEmpty)
-        // `q=` would return the *unfiltered* collection, which reads as "search matched
-        // everything". Not sending the request at all is the correct behaviour.
         #expect(stack.networkMock.recordedURLs.isEmpty)
     }
 

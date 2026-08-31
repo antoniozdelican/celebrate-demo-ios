@@ -2,7 +2,6 @@ import Foundation
 import Testing
 @testable import CelebrateDemoiOS
 
-/// Unit tests for response → entity translation, including the degradation rules.
 @Suite("Mapping")
 struct MappingTests {
     @Test("A complete row maps to a complete entity")
@@ -28,7 +27,6 @@ struct MappingTests {
         #expect(user.id == 42)
         #expect(user.fullName.isEmpty)
         #expect(user.email.isEmpty)
-        // Whitespace-only values become nil, not "   ", so no blank row is rendered.
         #expect(user.jobTitle == nil)
         #expect(user.imageURL == nil)
         #expect(user.initials.isEmpty)
@@ -49,7 +47,6 @@ struct MappingTests {
         #expect(details.address?.formatted == "626 Main Street, Phoenix, Mississippi, 29112, United States")
         #expect(details.university == "University of Wisconsin--Madison")
 
-        // "1996-5-30" — unpadded month and day, parsed in UTC regardless of device locale.
         let components = Calendar(identifier: .gregorian).dateComponents(
             in: TimeZone(secondsFromGMT: 0)!,
             from: try #require(details.birthDate)
@@ -85,7 +82,6 @@ struct MappingTests {
 
     @Test("Page arithmetic: an empty page terminates even if total disagrees")
     func emptyPageTerminates() {
-        // Guards against an infinite scroll loop when the server reports a stale total.
         let page = Page(items: [Int](), total: 208, skip: 30, limit: 30)
 
         #expect(!page.hasMore)

@@ -5,8 +5,6 @@ import Testing
 @MainActor
 @Suite("UserListViewModel")
 struct UserListViewModelTests {
-    /// Debounce is zeroed so tests assert behaviour rather than wait on a timer. The
-    /// debounce itself is covered separately, in `debouncesSearch`.
     private func makeSUT(
         getUsers: GetUsersInteractorMock = .init(),
         searchUsers: SearchUsersInteractorMock = .init(),
@@ -63,7 +61,6 @@ struct UserListViewModelTests {
 
     @Test("A cancelled load leaves the state alone rather than showing an error")
     func cancellationIsNotAnError() async {
-        // A superseded search keystroke must not flash an error at the user.
         let getUsers = GetUsersInteractorMock()
         getUsers.result = .failure(.cancelled)
         let sut = makeSUT(getUsers: getUsers)
@@ -140,8 +137,6 @@ struct UserListViewModelTests {
 
         await sut.load()
 
-        // Typing "Em" then "Emi": the first task is cancelled before its debounce ends,
-        // exactly as `.task(id:)` does when the query changes.
         sut.query = "Em"
         let superseded = Task { await sut.load() }
         try? await Task.sleep(for: .milliseconds(20))
@@ -198,8 +193,6 @@ struct UserListViewModelTests {
         getUsers.result = .failure(.timedOut)
         await sut.loadMore()
 
-        // Replacing the list with a full-screen error would discard what the user is
-        // already reading.
         guard case .loaded(let users) = sut.state else {
             Issue.record("Expected .loaded, got \(sut.state)")
             return

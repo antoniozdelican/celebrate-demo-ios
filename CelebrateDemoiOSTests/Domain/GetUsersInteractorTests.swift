@@ -2,8 +2,6 @@ import Foundation
 import Testing
 @testable import CelebrateDemoiOS
 
-/// The interactor's job is choosing which repository call to make and with what page
-/// size — so that is what these assert on, not the data coming back.
 @Suite("GetUsersInteractor")
 struct GetUsersInteractorTests {
     @Test("Loads the unfiltered list at the domain's page size")

@@ -2,12 +2,6 @@ import Foundation
 import Testing
 @testable import CelebrateDemoiOS
 
-/// Integration tests for the real Alamofire client.
-///
-/// Everything runs for real — `Session`, `validate()`, `serializingDecodable`, the whole
-/// `AFError` tree — with only the wire replaced by ``MockURLProtocol``. This is the layer
-/// that catches misconfigured decoders and unmapped error branches; a fake transport
-/// cannot, because it never produces an `AFError`.
 @Suite("HTTPClient (integration)")
 struct HTTPClientIntegrationTests {
     @Test("Sends a real request to the resolved URL and decodes the response")
@@ -86,15 +80,11 @@ struct HTTPClientIntegrationTests {
         }
         task.cancel()
 
-        // Either the request never started (CancellationError) or Alamofire cancelled it
-        // in flight (.cancelled). Both are correct; a *success* would mean cancellation
-        // is not wired through, which is what this asserts against.
         do {
             _ = try await task.value
         } catch let error as HTTPError {
             #expect(error == .cancelled)
         } catch is CancellationError {
-            // Also acceptable.
         }
     }
 }

@@ -2,8 +2,6 @@ import Foundation
 import Testing
 @testable import CelebrateDemoiOS
 
-/// URL construction is the cheapest networking bug to catch and the most expensive to
-/// debug from a UI symptom, so it is asserted directly on the type that performs it.
 @Suite("HTTPRequest")
 struct HTTPRequestTests {
     private let baseURL = URL(string: "https://dummyjson.com")!
@@ -25,8 +23,6 @@ struct HTTPRequestTests {
 
         let url = try #require(request.url)
 
-        // `+` must survive as %2B. URLComponents leaves it alone, and a server that reads
-        // a literal `+` as a space would silently search "john doe" instead.
         #expect(url.absoluteString.contains("q=john%2Bdoe%20smith%26co"))
         #expect(url.path == "/users/search")
     }

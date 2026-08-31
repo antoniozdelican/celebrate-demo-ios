@@ -38,8 +38,6 @@ struct GetUserDetailsInteractorTests {
 struct FormatBirthDateInteractorTests {
     @Test("Formats in UTC so the rendered date does not shift with the device's region")
     func formatsInUTC() {
-        // 1996-05-30T00:00:00Z — a local-time formatter would render this as 29 May in
-        // any timezone behind UTC.
         let date = Date(timeIntervalSince1970: 833_414_400)
 
         let formatted = FormatBirthDateInteractor().execute(date)

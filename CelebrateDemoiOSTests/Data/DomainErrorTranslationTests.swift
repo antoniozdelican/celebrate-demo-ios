@@ -1,8 +1,6 @@
 import Testing
 @testable import CelebrateDemoiOS
 
-/// The error boundary: every transport failure must land on a domain case the UI can
-/// render. A missed case here surfaces as a screen with no error state.
 @Suite("HTTPError → DomainError")
 struct DomainErrorTranslationTests {
     @Test(
