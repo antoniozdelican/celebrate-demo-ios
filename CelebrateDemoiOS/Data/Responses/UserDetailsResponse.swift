@@ -31,7 +31,7 @@ extension UserDetails {
             phone: response.phone?.nilIfBlank,
             username: response.username?.nilIfBlank,
             age: response.age,
-            gender: Gender(apiValue: response.gender),
+            gender: Gender(response: response.gender),
             birthDate: response.birthDate.flatMap(DummyJSONDate.parse),
             imageURL: response.image?.nilIfBlank.flatMap(URL.init(string:)),
             company: response.company.map(Company.init(response:)),
@@ -42,9 +42,9 @@ extension UserDetails {
     }
 }
 
-private extension Gender {
-    init(apiValue: String?) {
-        switch apiValue?.lowercased().trimmed {
+extension Gender {
+    init(response: String?) {
+        switch response?.lowercased().trimmed {
         case "male": self = .male
         case "female": self = .female
         case .some(let value) where !value.isEmpty: self = .other(value)
