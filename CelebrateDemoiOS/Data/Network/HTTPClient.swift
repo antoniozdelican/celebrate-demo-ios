@@ -11,7 +11,7 @@ import Foundation
 /// pagination, or DummyJSON.
 protocol HTTPClientProtocol: Sendable {
     func send<Response: Decodable & Sendable>(
-        _ endpoint: Endpoint,
+        _ request: HTTPRequest,
         as type: Response.Type
     ) async throws(HTTPError) -> Response
 }
@@ -19,7 +19,7 @@ protocol HTTPClientProtocol: Sendable {
 /// Alamofire-backed implementation of ``HTTPClientProtocol``.
 ///
 /// **This is one of only two files in the project that import Alamofire** (the other
-/// being `HTTPError`). Everything above it speaks in `Endpoint` / `HTTPError`,
+/// being `HTTPError`). Everything above it speaks in `HTTPRequest` / `HTTPError`,
 /// so replacing Alamofire with `URLSession` — or adding certificate pinning, auth
 /// refresh or logging — is a change confined to this type.
 ///
@@ -59,13 +59,13 @@ final class HTTPClient: HTTPClientProtocol {
     }
 
     func send<Response: Decodable & Sendable>(
-        _ endpoint: Endpoint,
+        _ request: HTTPRequest,
         as type: Response.Type
     ) async throws(HTTPError) -> Response {
-        let request = try endpoint.urlRequest(baseURL: baseURL)
+        let urlRequest = try request.urlRequest(baseURL: baseURL)
 
         let dataResponse = await session
-            .request(request)
+            .request(urlRequest)
             .validate(statusCode: 200..<300)
             .serializingDecodable(Response.self)
             .response

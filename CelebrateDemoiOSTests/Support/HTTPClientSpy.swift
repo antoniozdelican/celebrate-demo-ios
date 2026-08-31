@@ -15,23 +15,23 @@ final class HTTPClientSpy: HTTPClientProtocol, @unchecked Sendable {
 
     private let lock = NSLock()
     private var outcome: Outcome
-    private var _endpoints: [Endpoint] = []
+    private var _requests: [HTTPRequest] = []
 
     init(outcome: Outcome = .success(Data("{}".utf8))) {
         self.outcome = outcome
     }
 
     /// Endpoints the subject under test asked for, in order.
-    var endpoints: [Endpoint] { lock.withLock { _endpoints } }
+    var requests: [HTTPRequest] { lock.withLock { _requests } }
 
     func set(_ outcome: Outcome) { lock.withLock { self.outcome = outcome } }
 
     func send<Response: Decodable & Sendable>(
-        _ endpoint: Endpoint,
+        _ request: HTTPRequest,
         as type: Response.Type
     ) async throws(HTTPError) -> Response {
         let current: Outcome = lock.withLock {
-            _endpoints.append(endpoint)
+            _requests.append(request)
             return outcome
         }
 
@@ -48,7 +48,7 @@ final class HTTPClientSpy: HTTPClientProtocol, @unchecked Sendable {
     }
 }
 
-extension Endpoint {
+extension HTTPRequest {
     /// Convenience for asserting on query encoding without rebuilding a `URLRequest`.
     func queryValue(_ name: String) -> String? {
         queryItems.first { $0.name == name }?.value

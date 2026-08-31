@@ -26,7 +26,7 @@ struct UserRemoteDataSourceTests {
 
         _ = try await sut.users(limit: 50, skip: 100)
 
-        let endpoint = try #require(client.endpoints.first)
+        let endpoint = try #require(client.requests.first)
         #expect(endpoint.path == "users")
         #expect(endpoint.queryValue("limit") == "50")
         #expect(endpoint.queryValue("skip") == "100")

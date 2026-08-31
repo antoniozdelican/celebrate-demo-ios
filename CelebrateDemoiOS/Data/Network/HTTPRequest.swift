@@ -2,11 +2,11 @@ import Foundation
 
 /// A transport-agnostic description of one request.
 ///
-/// Intentionally *not* Alamofire's `URLRequestConvertible`: endpoints are built and
+/// Intentionally *not* Alamofire's `URLRequestConvertible`: requests are built and
 /// asserted on by data sources and tests, and neither should have to import a
 /// networking library to do it. ``HTTPClient`` is the single place that turns this into
 /// a `URLRequest`.
-struct Endpoint: Equatable, Sendable {
+struct HTTPRequest: Equatable, Sendable {
     let path: String
     var method: HTTPMethod = .get
     var queryItems: [URLQueryItem] = []

@@ -51,7 +51,7 @@ struct UserEndpointsTests {
 
     @Test("Query items with no value are omitted from the URL")
     func nilQueryItemsAreDropped() throws {
-        let endpoint = Endpoint(
+        let endpoint = HTTPRequest(
             path: "users",
             queryItems: [
                 URLQueryItem(name: "limit", value: "30"),

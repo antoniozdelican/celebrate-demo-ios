@@ -2,24 +2,34 @@ import Foundation
 
 /// The user resource, expressed in response models.
 ///
-/// A data source is *per resource*: it owns that resource's endpoints, its response models and
-/// nothing else. Contrast with a single app-wide "NetworkManager", which accretes one
-/// method per endpoint until it is untestable and merge-conflict-prone.
+/// A data source is *per resource*: it owns that resource's paths, its response models
+/// and nothing else. Contrast with a single app-wide "NetworkManager", which accretes
+/// one method per endpoint until it is untestable and merge-conflict-prone.
 ///
-/// It returns response models rather than domain entities on purpose — mapping is the repository's
-/// job, which keeps the data source a thin, obviously-correct translation of the API.
+/// It returns response models rather than domain entities on purpose — mapping is the
+/// repository's job, which keeps the data source a thin, obviously-correct translation
+/// of the API.
 protocol UserRemoteDataSourceProtocol: Sendable {
     func users(limit: Int, skip: Int) async throws(HTTPError) -> UsersPageResponse
     func searchUsers(query: String, limit: Int, skip: Int) async throws(HTTPError) -> UsersPageResponse
     func userDetails(id: Int) async throws(HTTPError) -> UserDetailsResponse
 }
 
-/// Default implementation of ``UserRemoteDataSourceProtocol``.
-///
-/// Note how little there is here: the data source picks an endpoint and names a response
-/// type. Transport concerns (retry, validation, error translation, decoding) belong to
-/// ``HTTPClientProtocol``; domain concerns belong to ``UserRepository``.
 struct UserRemoteDataSource: UserRemoteDataSourceProtocol {
+    /// Endpoints this resource can address. Values only — each function builds its own
+    /// ``HTTPRequest`` around them.
+    private enum Endpoint: String {
+        case users
+        case search = "users/search"
+    }
+
+    /// Fields requested for list rows.
+    ///
+    /// `select` trims the response from ~30 fields per user to 5, a meaningful bandwidth
+    /// and decode-time saving across 200+ users. The detail screen fetches the full
+    /// record separately, so it sends no `select`.
+    private static let summaryFields = "firstName,lastName,email,image,company"
+
     private let client: any HTTPClientProtocol
 
     init(client: any HTTPClientProtocol) {
@@ -27,17 +37,32 @@ struct UserRemoteDataSource: UserRemoteDataSourceProtocol {
     }
 
     func users(limit: Int, skip: Int) async throws(HTTPError) -> UsersPageResponse {
-        try await client.send(UserEndpoints.list(limit: limit, skip: skip), as: UsersPageResponse.self)
+        let request = HTTPRequest(
+            path: Endpoint.users.rawValue,
+            queryItems: [
+                URLQueryItem(name: "limit", value: String(limit)),
+                URLQueryItem(name: "skip", value: String(skip)),
+                URLQueryItem(name: "select", value: Self.summaryFields),
+            ]
+        )
+        return try await client.send(request, as: UsersPageResponse.self)
     }
 
     func searchUsers(query: String, limit: Int, skip: Int) async throws(HTTPError) -> UsersPageResponse {
-        try await client.send(
-            UserEndpoints.search(query: query, limit: limit, skip: skip),
-            as: UsersPageResponse.self
+        let request = HTTPRequest(
+            path: Endpoint.search.rawValue,
+            queryItems: [
+                URLQueryItem(name: "q", value: query),
+                URLQueryItem(name: "limit", value: String(limit)),
+                URLQueryItem(name: "skip", value: String(skip)),
+                URLQueryItem(name: "select", value: Self.summaryFields),
+            ]
         )
+        return try await client.send(request, as: UsersPageResponse.self)
     }
 
     func userDetails(id: Int) async throws(HTTPError) -> UserDetailsResponse {
-        try await client.send(UserEndpoints.details(id: id), as: UserDetailsResponse.self)
+        let request = HTTPRequest(path: "\(Endpoint.users.rawValue)/\(id)")
+        return try await client.send(request, as: UserDetailsResponse.self)
     }
 }
