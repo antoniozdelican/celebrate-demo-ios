@@ -7,9 +7,9 @@ The app lists users with pagination and search, opens a detail screen for each, 
 structured with Clean Architecture — presentation, domain and data layers with
 dependencies pointing inwards.
 
-> **Status: feature-complete except the animation.** All four layers are implemented and
-> the app runs against the live API. 74 tests pass with no network access. Remaining: the
-> collapsible-header animation, snapshot tests and an XCUITest end-to-end flow.
+> **Status: feature-complete.** All four layers are implemented, the app runs against the
+> live API, and 84 tests pass with no network access — 76 unit and integration, 8
+> end-to-end. Snapshot tests are the one item outstanding.
 
 ## Requirements
 
@@ -163,6 +163,28 @@ scrolling, the large title collapses correctly, and the Cancel button, scroll-to
 keyboard and VoiceOver search semantics come for free. The design system keeps five
 components, above the brief's minimum of three.
 
+### The collapsible header is driven by scroll offset
+
+`CollapsibleHeader` reads the scroll offset through a preference key in a named
+coordinate space, maps it to a 0…1 progress over 120pt, and shrinks the avatar, scales
+the name, fades the subtitle out early and tightens padding. Past 90% the name is handed
+to the navigation bar. The offset is clamped, so overscroll and rubber-band cannot invert
+the avatar or push opacity out of range.
+
+The header sits beside the scroll view rather than in a `safeAreaInset`: an inset view's
+height feeds the scroll view's content inset, which feeds the offset the header is driven
+by, and that coupling is worth avoiding even where it is not currently misbehaving.
+
+It lives in `Presentation/UserDetail`, not the design system. Its API is domain-free, so
+it *could* move, but it has one consumer and its constants — the collapse distance, how
+far the avatar shrinks — are decisions for this screen rather than tokens other screens
+should inherit. Components are promoted on the second consumer.
+
+The animation is verified end to end by `UserFlowUITests`, which asserts the name moves
+into the navigation bar after scrolling. It asserts that rather than the header's frame:
+`accessibilityElement(children: .combine)` makes the reported frame the union of the
+header's children, not its visual height, so measuring it is misleading.
+
 ### Search runs server-side
 
 `GET /users/search?q=` rather than filtering a locally-held array, because the dataset is
@@ -181,15 +203,23 @@ possibly-blank query, which would make an empty string a sentinel meaning "no fi
 | Tier | Tooling | Scope |
 |---|---|---|
 | Unit | Swift Testing | request construction, mapping, error translation, view model state |
-| Integration | Swift Testing + `URLProtocol` stub | the real stack with only the wire faked |
-| Snapshot | swift-snapshot-testing | design-system components, screen states, light/dark |
+| Integration | Swift Testing + `URLProtocol` mock | the real stack with only the wire faked |
 | E2E | XCUITest | launch → list → search → detail → animated interaction |
+| Snapshot | *not yet written* | design-system components, screen states, light/dark |
 
-74 tests, no network access. Unit, integration and snapshot tests run from the
+84 tests, none of which touch the network. Everything runs from the
 **CelebrateDemoiOS** scheme:
 
 ```bash
 xcodebuild test -scheme CelebrateDemoiOS -destination 'platform=iOS Simulator,name=iPhone 16'
+```
+
+The UI tests are sensitive to simulator state: a stale device produces
+"Failed to install or launch the test runner" rather than a test failure. Erasing and
+fully booting first avoids it.
+
+```bash
+xcrun simctl erase "iPhone 16" && xcrun simctl bootstatus "iPhone 16" -b
 ```
 
 ### Suites
@@ -207,6 +237,7 @@ xcodebuild test -scheme CelebrateDemoiOS -destination 'platform=iOS Simulator,na
 | `GetUserDetailsInteractorTests` | unit | identifier passed through, failures propagated |
 | `UserListViewModelTests` | unit | state machine: search, debounce cancellation, pagination, refresh, retry |
 | `UserDetailViewModelTests` | unit | load-once guard, notFound versus recoverable failures, retry |
+| `UserFlowUITests` | e2e | list, search and clear, no-match, tap into detail, header collapse, failure and empty scenarios |
 
 **How the integration tests work.** They build the production stack — real
 `UserRepository`, real `UserRemoteDataSource`, real `HTTPClient`, real Alamofire
@@ -215,8 +246,24 @@ session's `URLSessionConfiguration`. Everything except the socket runs for real,
 what lets them catch a misconfigured decoder or an unmapped `AFError` branch that a faked
 transport never produces.
 
-Each test owns a private `NetworkStub`, routed by a header stamped on its session, so
+Each test owns a private `NetworkMock`, routed by a header stamped on its session, so
 there is no shared mutable state and the suites run in parallel.
+
+**How the UI tests work.** They run the app out of process, so the integration tests'
+`MockURLProtocol` cannot reach it — something has to live in the app target. That
+something is `UITestURLProtocol`, a `#if DEBUG` protocol the composition root installs
+under a `-uiTesting` launch argument, with `STUB_SCENARIO` selecting success, empty or
+error.
+
+It fakes the **wire**, not the repository, so the UI tests still run through `HTTPClient`,
+the data source, decoding, mapping and error translation. An earlier version replaced the
+repository and skipped all of that — those tests would have passed with a broken decoder.
+Faking the wire is also what makes the error state reachable at all: the live API will
+not return a failure on request.
+
+**Naming.** Anything that stands in for a collaborator is a `*Mock` and lives in
+`Tests/Mocks`. Test *data* is a `*.fixture` in `Tests/Support`. `TestStack` is neither —
+it assembles the real production stack with only the wire replaced.
 
 Swift Testing is used rather than XCTest or a third-party matcher library; it is
 first-party from Xcode 16 and needs no dependency. Fakes are hand-written protocol
@@ -230,6 +277,7 @@ CelebrateDemoiOS/
 ├── CelebrateDemoiOS.xcodeproj
 ├── CelebrateDemoiOS/
 │   ├── App/                   composition root + app entry point
+│   │   └── UITesting/         DEBUG-only URLProtocol serving fixtures to UI tests
 │   ├── Domain/
 │   │   ├── Entities/          User, UserDetails, Page, Address, Company, Gender, DomainError
 │   │   ├── Interactors/       GetUsers, SearchUsers, GetUserDetails
@@ -246,14 +294,16 @@ CelebrateDemoiOS/
 │   └── Presentation/
 │       ├── Navigation/        Route
 │       ├── Root/              RootView
+│       ├── Support/           scroll offset reporting
 │       ├── UserList/          view, view model, state, row
-│       └── UserDetail/        view, view model, state
+│       └── UserDetail/        view, view model, state, collapsible header
 ├── CelebrateDemoiOSTests/
-│   ├── Support/               URLProtocol stub, fixtures, fakes
+│   ├── Mocks/                 one test double per file, all *Mock
+│   ├── Support/               TestStack, JSON fixtures, entity fixtures
 │   ├── Data/                  data layer unit + integration suites
 │   ├── Domain/                interactor suites
 │   └── Presentation/          view model suites
-└── CelebrateDemoiOSUITests/   XCUITest end-to-end tests
+└── CelebrateDemoiOSUITests/   end-to-end flow
 ```
 
 
@@ -268,9 +318,9 @@ CelebrateDemoiOS/
 - [x] Design system: tokens and reusable components
 - [x] Presentation: list with pagination, pull-to-refresh and search
 - [x] Presentation: detail screen and navigation
-- [ ] Presentation: collapsible header animation on the detail screen
+- [x] Presentation: collapsible header animation on the detail screen
+- [x] XCUITest end-to-end flow
 - [ ] Snapshot tests
-- [ ] XCUITest end-to-end flow
 
 ## What I would do with more time
 
