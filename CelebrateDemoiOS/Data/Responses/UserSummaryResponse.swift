@@ -1,7 +1,23 @@
 import Foundation
 
-extension UserSummaryDTO {
-    /// DTO → entity.
+/// A row of `GET /users` (and `GET /users/search`).
+///
+/// Every field except `id` is optional. DummyJSON's `select` parameter lets us request a
+/// subset of columns, and a response model that hard-requires a field would break the
+/// moment that list changes. Optionality is resolved once, during mapping.
+struct UserSummaryResponse: Decodable, Equatable, Sendable {
+    let id: Int
+    let firstName: String?
+    let lastName: String?
+    let email: String?
+    let image: String?
+    let company: CompanyResponse?
+}
+
+// MARK: - Mapping
+
+extension UserSummaryResponse {
+    /// Response → entity.
     ///
     /// Mapping is total: it cannot fail. Missing optional strings become `""` and a bad
     /// image URL becomes `nil`, because one malformed row should degrade that row, never
@@ -16,15 +32,4 @@ extension UserSummaryDTO {
             jobTitle: company?.title?.nilIfBlank
         )
     }
-}
-
-extension UsersPageDTO {
-    func toDomain() -> Page<User> {
-        Page(items: users.map { $0.toDomain() }, total: total, skip: skip, limit: limit)
-    }
-}
-
-extension String {
-    var trimmed: String { trimmingCharacters(in: .whitespacesAndNewlines) }
-    var nilIfBlank: String? { trimmed.isEmpty ? nil : trimmed }
 }

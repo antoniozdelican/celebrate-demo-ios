@@ -128,7 +128,7 @@ enum Fixtures {
 
     static let notFound = json(#"{ "message": "User with id '9999' not found" }"#)
 
-    /// Valid JSON, wrong shape: `total` is a string where the DTO expects an `Int`.
+    /// Valid JSON, wrong shape: `total` is a string where the response model expects an `Int`.
     static let malformedPage = json("""
     { "users": [], "total": "lots", "skip": 0, "limit": 30 }
     """)

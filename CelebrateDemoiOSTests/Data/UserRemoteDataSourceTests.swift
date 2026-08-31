@@ -34,7 +34,7 @@ struct UserRemoteDataSourceTests {
 
     @Test("Ignores the fields we deliberately do not model")
     func ignoresUnmodelledFields() async throws {
-        // `password`, `ssn` and `bloodGroup` are in the fixture and absent from the DTO.
+        // `password`, `ssn` and `bloodGroup` are in the fixture and absent from the response model.
         let client = HTTPClientSpy(outcome: .success(Fixtures.userDetails))
         let sut = UserRemoteDataSource(client: client)
 

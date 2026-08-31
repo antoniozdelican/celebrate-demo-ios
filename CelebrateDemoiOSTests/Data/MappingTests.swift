@@ -2,12 +2,12 @@ import Foundation
 import Testing
 @testable import CelebrateDemoiOS
 
-/// Unit tests for DTO → entity translation, including the degradation rules.
+/// Unit tests for response → entity translation, including the degradation rules.
 @Suite("Mapping")
 struct MappingTests {
     @Test("A complete row maps to a complete entity")
     func mapsCompleteSummary() throws {
-        let page = try JSONDecoder().decode(UsersPageDTO.self, from: Fixtures.usersPage)
+        let page = try JSONDecoder().decode(UsersPageResponse.self, from: Fixtures.usersPage)
 
         let user = try #require(page.toDomain().items.first)
 
@@ -21,7 +21,7 @@ struct MappingTests {
 
     @Test("A row missing every optional degrades instead of failing")
     func mapsSparseSummary() throws {
-        let page = try JSONDecoder().decode(UsersPageDTO.self, from: Fixtures.sparsePage)
+        let page = try JSONDecoder().decode(UsersPageResponse.self, from: Fixtures.sparsePage)
 
         let user = try #require(page.toDomain().items.first)
 
@@ -36,9 +36,9 @@ struct MappingTests {
 
     @Test("Details map, including the unpadded birth date")
     func mapsDetails() throws {
-        let dto = try JSONDecoder().decode(UserDetailsDTO.self, from: Fixtures.userDetails)
+        let response = try JSONDecoder().decode(UserDetailsResponse.self, from: Fixtures.userDetails)
 
-        let details = dto.toDomain()
+        let details = response.toDomain()
 
         #expect(details.fullName == "Emily Johnson")
         #expect(details.maidenName == "Smith")
@@ -62,9 +62,9 @@ struct MappingTests {
     @Test("An unrecognised gender is preserved rather than discarded")
     func preservesUnknownGender() throws {
         let data = Data(#"{ "id": 1, "gender": "non-binary" }"#.utf8)
-        let dto = try JSONDecoder().decode(UserDetailsDTO.self, from: data)
+        let response = try JSONDecoder().decode(UserDetailsResponse.self, from: data)
 
-        #expect(dto.toDomain().gender == .other("non-binary"))
+        #expect(response.toDomain().gender == .other("non-binary"))
     }
 
     @Test("Page arithmetic: a full page in a larger collection has a next offset")

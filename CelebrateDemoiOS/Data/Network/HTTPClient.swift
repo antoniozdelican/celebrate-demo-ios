@@ -1,10 +1,25 @@
 import Alamofire
 import Foundation
 
+/// A resource-agnostic HTTP transport.
+///
+/// This is the seam that keeps Alamofire out of the rest of the app. Data sources depend
+/// on this protocol, so they can be unit-tested against a trivial in-memory fake, while
+/// integration tests exercise the real ``HTTPClient`` with a stubbed `URLProtocol`.
+///
+/// It knows about verbs, headers, status codes and decoding — never about users,
+/// pagination, or DummyJSON.
+protocol HTTPClientProtocol: Sendable {
+    func send<Response: Decodable & Sendable>(
+        _ endpoint: Endpoint,
+        as type: Response.Type
+    ) async throws(HTTPError) -> Response
+}
+
 /// Alamofire-backed implementation of ``HTTPClientProtocol``.
 ///
 /// **This is one of only two files in the project that import Alamofire** (the other
-/// being `HTTPError+Alamofire`). Everything above it speaks in `Endpoint` / `HTTPError`,
+/// being `HTTPError`). Everything above it speaks in `Endpoint` / `HTTPError`,
 /// so replacing Alamofire with `URLSession` — or adding certificate pinning, auth
 /// refresh or logging — is a change confined to this type.
 ///

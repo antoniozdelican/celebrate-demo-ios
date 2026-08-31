@@ -3,7 +3,7 @@ import Foundation
 /// The Domain layer's contract for user data.
 ///
 /// Declared here — and implemented in the Data layer — so the dependency arrow points
-/// inwards: interactors depend on this abstraction, never on Alamofire, DTOs or
+/// inwards: interactors depend on this abstraction, never on Alamofire, response models or
 /// DummyJSON. Swapping the backend, adding a cache, or feeding fixtures to UI tests are
 /// all changes behind this protocol.
 ///

@@ -7,7 +7,7 @@ import Foundation
 /// small is clearer than any framework that would produce it.
 final class HTTPClientSpy: HTTPClientProtocol, @unchecked Sendable {
     /// What `send` should do next. Success carries `Data`, so the spy still exercises the
-    /// real DTO shape rather than letting a wrong type slip through.
+    /// real response shape rather than letting a wrong type slip through.
     enum Outcome: Sendable {
         case success(Data)
         case failure(HTTPError)

@@ -4,7 +4,7 @@ import Foundation
 ///
 /// Three responsibilities, and no others:
 /// 1. delegate to the remote data source,
-/// 2. map DTOs to entities,
+/// 2. map responses to entities,
 /// 3. translate `HTTPError` into `DomainError`.
 ///
 /// It is the outermost point at which a networking type is still visible. A local cache
@@ -20,7 +20,7 @@ struct UserRepository: UserRepositoryProtocol {
         do {
             return try await remoteDataSource.users(limit: limit, skip: skip).toDomain()
         } catch {
-            throw DomainError(error)
+            throw error.toDomain()
         }
     }
 
@@ -35,7 +35,7 @@ struct UserRepository: UserRepositoryProtocol {
                 .searchUsers(query: trimmed, limit: limit, skip: skip)
                 .toDomain()
         } catch {
-            throw DomainError(error)
+            throw error.toDomain()
         }
     }
 
@@ -43,7 +43,7 @@ struct UserRepository: UserRepositoryProtocol {
         do {
             return try await remoteDataSource.userDetails(id: id).toDomain()
         } catch {
-            throw DomainError(error)
+            throw error.toDomain()
         }
     }
 }
